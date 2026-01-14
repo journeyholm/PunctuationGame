@@ -1799,9 +1799,25 @@ function initGame() {
         }
     });
 
+    // === HELPER FUNCTIONS (Restore these to fix the ReferenceError) ===
     const attachListener = (id, handler) => {
         const el = document.getElementById(id);
         if (el) el.onclick = handler;
+    };
+    
+    const attachTouch = (id, handler) => {
+        const el = document.getElementById(id);
+        if (el) {
+            // Touchstart for mobile response
+            el.addEventListener('touchstart', (e) => { 
+                e.preventDefault(); 
+                handler(); 
+            }, { passive: false });
+            // Mousedown for desktop testing
+            el.addEventListener('mousedown', (e) => {
+                handler();
+            });
+        }
     };
 
     // 5. Safe Reset for Play Again
@@ -1809,28 +1825,35 @@ function initGame() {
 
     // 6. FIX: Functional Elevator Buttons
     attachListener('goto-ground-button', () => { 
-        gameState.player.level = 'ground'; // CRITICAL: Updates game state
+        gameState.player.level = 'ground'; // CRITICAL: Updates internal state
         World.loadLevel('ground'); 
         UI.closeModals(); 
     });
     attachListener('goto-sky-button', () => { 
-        gameState.player.level = 'sky'; // CRITICAL: Updates game state
+        gameState.player.level = 'sky'; // CRITICAL: Updates internal state
         World.loadLevel('sky'); 
         UI.closeModals(); 
     });
     attachListener('goto-depths-button', () => { 
-        gameState.player.level = 'depths'; // CRITICAL: Updates game state
+        gameState.player.level = 'depths'; // CRITICAL: Updates internal state
         World.loadLevel('depths'); 
         UI.closeModals(); 
     });
 
-    // standard UI buttons
+    // 7. Standard UI Buttons
     attachListener('talk-button', UI.startQuiz);
     attachListener('close-dialogue-button', UI.closeModals);
     attachListener('exit-quiz-button', UI.closeModals);
     attachListener('codex-button', UI.showCodex);
     attachListener('close-codex-button', UI.closeModals);
     attachListener('stay-button', UI.closeModals);
+
+    // 8. FIX: Mobile D-Pad Wiring
+    attachTouch('up-btn-ipad', () => Player.move(0, -1));
+    attachTouch('down-btn-ipad', () => Player.move(0, 1));
+    attachTouch('left-btn-ipad', () => Player.move(-1, 0));
+    attachTouch('right-btn-ipad', () => Player.move(1, 0));
+    attachTouch('interact-btn-ipad', Player.interact); 
 
     UI.updateUI();
     animate();
