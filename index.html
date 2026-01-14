@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Roots: DUAL CORE</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+
+        :root {
+            --neon-blue: #00f3ff;
+            --neon-pink: #ff00ff;
+            --neon-green: #00ff41;
+            --neon-red: #ff3131;
+            --neon-gold: #ffd700;
+            --bg-color: #050510;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            font-family: 'Share Tech Mono', monospace;
+            color: white;
+            touch-action: none;
+            user-select: none;
+        }
+
+        /* SCANLINES */
+        .scanlines {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1));
+            background-size: 100% 4px; pointer-events: none; z-index: 100;
+        }
+
+        #game-container { position: relative; width: 100vw; height: 100vh; }
+        canvas { display: block; }
+
+        /* HUD */
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            display: flex; flex-direction: column; justify-content: space-between;
+            z-index: 10;
+        }
+
+        .hud-bar {
+            padding: 15px; display: flex; justify-content: space-between; align-items: flex-start;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
+            text-shadow: 0 0 10px var(--neon-blue); pointer-events: auto;
+        }
+
+        .stat-group { display: flex; gap: 20px; align-items: center; }
+        .hud-label { color: #888; font-size: 0.7rem; display: block; letter-spacing: 1px; }
+        .hud-val { font-size: 1.8rem; font-family: 'Orbitron'; color: #fff; text-shadow: 0 0 10px var(--neon-blue); }
+        .hud-val.gold { color: var(--neon-gold); text-shadow: 0 0 10px var(--neon-gold); }
+
+        /* Fever Bar */
+        .fever-wrapper { margin-top: 5px; }
+        .fever-label { font-size: 0.7rem; color: var(--neon-pink); letter-spacing: 2px; margin-bottom: 2px; }
+        .fever-container {
+            width: 150px; height: 8px; border: 1px solid #555; background: rgba(0,0,0,0.5);
+            transform: skew(-20deg); overflow: hidden; position: relative;
+        }
+        .fever-fill {
+            height: 100%; width: 0%; background: linear-gradient(90deg, #ff00ff, #00f3ff);
+            transition: width 0.2s; box-shadow: 0 0 15px #ff00ff;
+        }
+        .fever-active .fever-fill { 
+            width: 100% !important; 
+            background: linear-gradient(90deg, #fff, #ff00ff, #fff);
+            animation: feverPulse 0.1s infinite; 
+        }
+        @keyframes feverPulse { 0% { opacity: 0.8; } 100% { opacity: 1; filter: brightness(1.5); } }
+
+        .shield-container { display: flex; gap: 5px; margin-top: 5px; }
+        .shield-pip { width: 25px; height: 8px; background: var(--neon-blue); transform: skew(-20deg); border: 1px solid #fff; }
+        .shield-pip.lost { background: rgba(50,50,50,0.3); border-color: #333; }
+
+        .exit-btn {
+            background: rgba(255, 49, 49, 0.1); border: 1px solid var(--neon-red); color: var(--neon-red);
+            font-size: 0.7rem; padding: 5px 15px; cursor: pointer; font-family: 'Orbitron';
+            transition: 0.2s;
+        }
+        .exit-btn:hover { background: var(--neon-red); color: white; box-shadow: 0 0 20px var(--neon-red); }
+
+        #target-box {
+            text-align: center; padding-bottom: 30px;
+            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+            pointer-events: auto;
+        }
+        #target-def {
+            font-family: 'Orbitron'; font-size: 1.8rem;
+            color: var(--neon-green); text-shadow: 0 0 25px var(--neon-green);
+            margin-bottom: 10px;
+        }
+        
+        .warp-message {
+            position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
+            font-family: 'Orbitron'; font-size: 4rem; color: var(--neon-gold);
+            text-shadow: 0 0 50px var(--neon-gold); text-align: center;
+            animation: pulse 1s infinite alternate; pointer-events: none;
+        }
+        @keyframes pulse { from { transform: translate(-50%, -50%) scale(1); opacity: 0.8; } to { transform: translate(-50%, -50%) scale(1.1); opacity: 1; } }
+
+        /* SCREENS */
+        .screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(5, 5, 12, 0.95); backdrop-filter: blur(8px);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 20; pointer-events: auto;
+            overflow-y: auto; padding: 40px 0; box-sizing: border-box;
+        }
+
+        .title-logo {
+            font-family: 'Orbitron'; font-size: 4rem;
+            background: linear-gradient(to bottom, #fff, var(--neon-blue));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 50px var(--neon-blue); text-align: center; margin-bottom: 0;
+        }
+        .subtitle { color: var(--neon-pink); letter-spacing: 4px; margin-bottom: 20px; font-family: 'Orbitron'; }
+        
+        .pilot-rank { 
+            color: var(--neon-gold); font-family: 'Orbitron'; font-size: 1rem; margin-bottom: 20px; 
+            border: 1px solid var(--neon-gold); padding: 10px 30px; background: rgba(255, 215, 0, 0.1);
+            cursor: pointer; transition: all 0.2s;
+            text-shadow: 0 0 10px var(--neon-gold);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
+        }
+        .pilot-rank:hover { background: rgba(255, 215, 0, 0.3); transform: scale(1.05); }
+
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 90%; max-width: 500px; }
+        
+        button.menu-btn {
+            background: rgba(0, 243, 255, 0.05); border: 1px solid var(--neon-blue); color: var(--neon-blue);
+            padding: 12px; font-family: 'Orbitron'; font-size: 0.8rem; cursor: pointer;
+            transition: 0.2s; text-transform: uppercase;
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+        }
+        button.menu-btn:hover { background: var(--neon-blue); color: #000; transform: scale(1.05); }
+        button.wide { grid-column: span 2; }
+        button.gold { border-color: var(--neon-gold); color: var(--neon-gold); }
+        button.gold:hover { background: var(--neon-gold); }
+        
+        /* Difficulty Toggle */
+        button.diff-btn { 
+            border: 2px solid var(--neon-green); color: var(--neon-green); 
+            background: rgba(0, 255, 65, 0.1);
+        }
+        button.diff-btn.advanced {
+            border: 2px solid var(--neon-pink); color: var(--neon-pink); 
+            background: rgba(255, 0, 255, 0.1);
+        }
+
+        /* SCROLLABLE LISTS */
+        .scroll-panel {
+            width: 90%; max-width: 700px; height: 50vh; overflow-y: auto;
+            background: rgba(0,0,0,0.5); border: 1px solid #333; padding: 20px;
+            display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;
+        }
+        .rank-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border: 1px solid #444; background: rgba(20,20,30,0.5); }
+        .rank-item.unlocked { border-color: var(--neon-green); background: rgba(0, 255, 65, 0.1); }
+        
+        .codex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+        .codex-item { padding: 10px; border: 1px solid #444; background: rgba(0,0,0,0.5); text-align: center; }
+        .codex-item.mastered { border-color: var(--neon-gold); background: rgba(255, 215, 0, 0.1); box-shadow: 0 0 10px rgba(255,215,0,0.2); }
+        
+        /* SHOP */
+        .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+        .item-card { border: 1px solid #444; padding: 15px; background: rgba(20,20,30,0.8); display: flex; flex-direction: column; justify-content: space-between; }
+        .item-card:hover { border-color: var(--neon-blue); transform: translateY(-2px); }
+        .price-tag { color: var(--neon-gold); font-weight: bold; margin: 10px 0; font-size: 1rem; }
+
+        .hidden { display: none !important; }
+        @media (max-width: 600px) {
+            .title-logo { font-size: 2rem; }
+            .btn-grid { grid-template-columns: 1fr; }
+            button.wide { grid-column: span 1; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="scanlines"></div>
+
+<div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="ui-layer" class="hidden">
+        <div class="hud-bar">
+            <div>
+                <div class="stat-group">
+                    <div><span class="hud-label">SCORE</span><span class="hud-val" id="score-val">0</span></div>
+                    <div><span class="hud-label">CREDITS</span><span class="hud-val gold" id="cash-val">0</span></div>
+                </div>
+                <div class="fever-wrapper">
+                    <div class="fever-label">FEVER</div>
+                    <div id="fever-bar" class="fever-container">
+                        <div id="fever-fill" class="fever-fill"></div>
+                    </div>
+                </div>
+                <div class="shield-container" id="shield-bar"></div>
+            </div>
+            <button class="exit-btn" onclick="Game.quit()">ABORT</button>
+        </div>
+        
+        <div id="warp-msg" class="warp-message hidden">WARP TUNNEL!</div>
+        
+        <div id="target-box">
+            <div style="font-size: 0.7rem; color: #aaa; letter-spacing: 2px;">TARGET DEFINITION</div>
+            <div id="target-def">LOADING...</div>
+            <button class="exit-btn" onclick="Game.togglePause()" style="font-size:0.6rem; padding: 5px 10px; width:auto;">PAUSE</button>
+        </div>
+    </div>
+
+    <div id="main-menu" class="screen">
+        <h1 class="title-logo">NEON ROOTS</h1>
+        <div class="subtitle">GREEK & LATIN AFFIXES</div>
+        
+        <div id="menu-rank-display" class="pilot-rank" onclick="UI.showProfile()">
+            RANK: ROOKIE <span style="font-size:0.7rem; margin-left:10px; color:#aaa;">(PROFILE)</span>
+        </div>
+        
+        <div class="btn-grid">
+            <button id="diff-toggle" class="menu-btn wide diff-btn advanced" onclick="UI.toggleDifficulty()">MODE: ADVANCED</button>
+            
+            <button class="menu-btn" onclick="Game.start(1)">Quarter 1<br><span style="font-size:0.6rem">WEEKS 1-7</span></button>
+            <button class="menu-btn" onclick="Game.start(2)">Quarter 2<br><span style="font-size:0.6rem">WEEKS 8-15</span></button>
+            <button class="menu-btn" onclick="Game.start(3)">Quarter 3<br><span style="font-size:0.6rem">WEEKS 16-26</span></button>
+            <button class="menu-btn" onclick="Game.start(4)">Quarter 4<br><span style="font-size:0.6rem">WEEKS 27-36</span></button>
+            <button class="menu-btn" onclick="Game.start(5)" style="border-color:var(--neon-green); color:var(--neon-green)">EXPERT (Q5)<br><span style="font-size:0.6rem">BONUS</span></button>
+            <button class="menu-btn" onclick="Game.start(6)" style="border-color:var(--neon-pink); color:var(--neon-pink)">MASTER<br><span style="font-size:0.6rem">ALL CONTENT</span></button>
+            <button class="menu-btn wide" onclick="UI.showCodex()">DATA CODEX</button>
+            <button class="menu-btn wide" onclick="UI.openShop()">HANGAR</button>
+            <button class="menu-btn wide" onclick="UI.showInstructions()" style="border-color:#aaa; color:#aaa;">MANUAL / HELP</button>
+        </div>
+    </div>
+
+    <div id="help-screen" class="screen hidden">
+        <h2 style="color:var(--neon-blue); font-family:'Orbitron'">MANUAL</h2>
+        <div class="scroll-panel" style="font-size:0.9rem;">
+            <p><strong style="color:var(--neon-green)">OBJECTIVE:</strong> Shoot the falling words that match the Definition at the bottom.</p>
+            <p><strong style="color:var(--neon-red)">ENEMIES:</strong> Avoid Red Alien Ships and their bullets. Don't shoot wrong words!</p>
+            <p><strong style="color:var(--neon-gold)">MODES:</strong><br>
+            • <strong>Beginner:</strong> Exact matches from the study sheet.<br>
+            • <strong>Advanced:</strong> Includes synonyms and expanded roots.</p>
+            <p><strong style="color:var(--neon-pink)">FEVER MODE:</strong> Hit 10 correct answers in a row to become an INVINCIBLE ENERGY BALL for 5 seconds.</p>
+            <p><strong style="color:var(--neon-blue)">DROPS & ABILITIES:</strong>
+                <br>📦 <span style="color:cyan">Blue Box</span> = Slow Time
+                <br>📦 <span style="color:lime">Green Box</span> = Shield Burst
+                <br>📦 <span style="color:purple">Purple Box</span> = Ghost Mode
+            </p>
+            <p><strong style="color:orange">WARP TUNNEL:</strong> Every 20 waves, survive the asteroid field to collect massive credits.</p>
+        </div>
+        <button class="menu-btn" onclick="UI.closeHelp()">BACK</button>
+    </div>
+
+    <div id="codex-screen" class="screen hidden">
+        <h2 style="color:var(--neon-blue); font-family:'Orbitron'">DATA CODEX</h2>
+        <p style="font-size:0.8rem; margin-bottom:10px;">GOLD STAR = Answered Correctly 10+ Times</p>
+        <div class="scroll-panel">
+            <div id="codex-grid" class="codex-grid"></div>
+        </div>
+        <button class="menu-btn" onclick="UI.closeCodex()">BACK</button>
+    </div>
+
+    <div id="profile-screen" class="screen hidden">
+        <h2 style="color:var(--neon-gold); font-family:'Orbitron'">PILOT RECORDS</h2>
+        <p style="margin-bottom:20px;">LIFETIME XP: <span id="total-xp" style="color:#fff">0</span></p>
+        <div id="rank-list" class="scroll-panel"></div>
+        <button class="menu-btn" onclick="UI.closeProfile()">BACK</button>
+    </div>
+
+    <div id="pause-screen" class="screen hidden">
+        <div style="background:rgba(0,0,0,0.9); border:2px solid var(--neon-blue); padding:40px; text-align:center;">
+            <h2 style="color:var(--neon-blue); margin-bottom:20px;">PAUSED</h2>
+            <div style="display:flex; flex-direction:column; gap:10px; width:200px;">
+                <button class="menu-btn" onclick="Game.togglePause()">RESUME</button>
+                <button class="menu-btn" onclick="Game.quit()" style="border-color:var(--neon-red); color:var(--neon-red)">QUIT</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="shop-screen" class="screen hidden">
+        <h2 style="color:var(--neon-gold); font-family:'Orbitron'">HANGAR BAY</h2>
+        <p>CREDITS: <span id="shop-cash" style="color:var(--neon-gold); font-weight:bold;">0</span></p>
+        <div class="scroll-panel">
+            <div class="shop-tabs" style="margin-bottom:10px; display:flex; gap:5px; justify-content:center;">
+                <button class="menu-btn" onclick="UI.renderShop('ships')">SHIPS</button>
+                <button class="menu-btn" onclick="UI.renderShop('weapons')">WEAPONS</button>
+                <button class="menu-btn" onclick="UI.renderShop('mods')">MODS</button>
+                <button class="menu-btn" onclick="UI.renderShop('pets')">EVOLVE</button>
+            </div>
+            <div id="shop-grid" class="shop-grid"></div>
+        </div>
+        <button class="menu-btn" onclick="UI.closeShop()">EXIT</button>
+    </div>
+
+    <div id="game-over" class="screen hidden">
+        <h1 style="color:var(--neon-red); font-family:'Orbitron'">MISSION FAILED</h1>
+        <div class="stat-group" style="flex-direction:column; margin:20px;">
+            <span class="hud-label">FINAL SCORE</span><span class="hud-val" id="end-score" style="font-size:3rem;">0</span>
+        </div>
+        <div class="btn-grid" style="width:300px;">
+            <button class="menu-btn wide" onclick="UI.showReview()">REVIEW MISTAKES</button>
+            <button class="menu-btn wide" onclick="Game.quit()" style="margin-top:10px;">MAIN MENU</button>
+        </div>
+    </div>
+
+    <div id="review-screen" class="screen hidden">
+        <h2 style="color:var(--neon-blue)">TACTICAL ANALYSIS</h2>
+        <div id="review-list" class="scroll-panel"></div>
+        <button class="menu-btn" onclick="Game.quit()" style="margin-top:20px;">DONE</button>
+    </div>
+</div>
+
+<script>
+/* --- AUDIO ENGINE --- */
+const AudioSys = {
+    ctx: null,
+    init: () => { window.AudioContext = window.AudioContext || window.webkitAudioContext; AudioSys.ctx = new AudioContext(); },
+    play: (freq, type, dur, vol, slide) => {
+        if(!AudioSys.ctx) return;
+        const o = AudioSys.ctx.createOscillator(); const g = AudioSys.ctx.createGain();
+        o.type = type; o.frequency.setValueAtTime(freq, AudioSys.ctx.currentTime);
+        if(slide) o.frequency.exponentialRampToValueAtTime(slide, AudioSys.ctx.currentTime + dur);
+        g.gain.setValueAtTime(vol, AudioSys.ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.01, AudioSys.ctx.currentTime + dur);
+        o.connect(g); g.connect(AudioSys.ctx.destination);
+        o.start(); o.stop(AudioSys.ctx.currentTime + dur);
+    },
+    shoot: () => AudioSys.play(800, 'square', 0.1, 0.05, 400),
+    shotgun: () => { AudioSys.play(300, 'sawtooth', 0.15, 0.05); setTimeout(()=>AudioSys.play(250,'sawtooth',0.15,0.05), 50); },
+    coin: () => { AudioSys.play(1500, 'sine', 0.05, 0.1); setTimeout(()=>AudioSys.play(2000,'sine',0.1,0.1), 50); },
+    hit: () => AudioSys.play(150, 'sawtooth', 0.1, 0.1, 50),
+    buy: () => AudioSys.play(500, 'sine', 0.4, 0.1, 1000),
+    enemyShoot: () => AudioSys.play(200, 'triangle', 0.2, 0.05, 100),
+    feverStart: () => { AudioSys.play(400, 'square', 0.5, 0.2, 1200); },
+    warp: () => { AudioSys.play(100, 'sawtooth', 2.0, 0.3, 800); },
+    powerup: () => { AudioSys.play(600, 'sine', 0.5, 0.2, 1200); }
+};
+
+/* --- DATA: ADVANCED (Expanded Roots) --- */
+const DictionaryAdvanced = {
+    q1: [
+        { definition: "Before, in advance", words: ["Pre-", "Ante-", "Fore-"] },
+        { definition: "After", words: ["Post-"] },
+        { definition: "One", words: ["Mono-", "Uni-"] },
+        { definition: "Many", words: ["Poly-"] },
+        { definition: "Two", words: ["Bi-", "Di-", "Duo-"] },
+        { definition: "Three", words: ["Tri-"] },
+        { definition: "Four", words: ["Quad-", "Quar-", "Tetra-"] },
+        { definition: "Together, with", words: ["Co-", "Com-", "Con-", "Syn-", "Sym-"] },
+        { definition: "Against, opposite", words: ["Contra-", "Counter-", "Anti-"] },
+        { definition: "Under, below", words: ["Sub-", "Infra-"] },
+        { definition: "Over, above, beyond", words: ["Super-", "Sur-", "Hyper-"] },
+        { definition: "Not, none", words: ["Un-", "Dis-", "Non-", "In-", "Im-"] }
+    ],
+    q2: [
+        { definition: "Between, among", words: ["Inter-"] },
+        { definition: "Within, inside", words: ["Intra-", "Intro-"] },
+        { definition: "Round, around", words: ["Circ-", "Circum-", "Peri-"] },
+        { definition: "Across, through", words: ["Trans-", "Dia-"] },
+        { definition: "Bad, badly, wrong", words: ["Mal-", "Mis-", "Dys-"] },
+        { definition: "Again, back", words: ["Re-"] },
+        { definition: "Together, same", words: ["Sym-", "Syn-"] },
+        { definition: "Under, below, less", words: ["Hypo-"] },
+        { definition: "Over, beyond, high", words: ["Hyper-"] },
+        { definition: "Able to be", words: ["-able", "-ible"] },
+        { definition: "Without", words: ["-less", "a-", "an-"] },
+        { definition: "Study of", words: ["-ology"] },
+        { definition: "Fear of", words: ["-phobia"] },
+        { definition: "A person who", words: ["-ian", "-or", "-ist", "-er"] },
+        { definition: "State or quality of", words: ["-ance", "-ence"] }
+    ],
+    q3: [
+        { definition: "Out, out of", words: ["E-", "Ex-", "Ec-"] },
+        { definition: "In, into", words: ["In-", "En-", "Em-"] },
+        { definition: "Not", words: ["Non-", "Il-", "Im-", "Ir-", "In-"] },
+        { definition: "Forward, favor", words: ["Pro-"] },
+        { definition: "Backward, back", words: ["Retro-"] },
+        { definition: "Against, opposite", words: ["An-", "Anti-"] },
+        { definition: "Away from", words: ["Ab-", "Apo-"] },
+        { definition: "Toward", words: ["Ad-"] },
+        { definition: "Down, out", words: ["De-", "Cata-"] },
+        { definition: "Equal", words: ["Equ-", "Iso-"] },
+        { definition: "Half", words: ["Hemi-", "Semi-"] },
+        { definition: "Many", words: ["Multi-"] },
+        { definition: "Self", words: ["Auto-", "Self-"] },
+        { definition: "Small", words: ["Micro-"] },
+        { definition: "Large", words: ["Mega-", "Megal-", "Megalo-", "Macro-"] },
+        { definition: "State, condition", words: ["-ness"] },
+        { definition: "Full of", words: ["-ful"] },
+        { definition: "Related to", words: ["-ish"] },
+        { definition: "A person who", words: ["-ist"] },
+        { definition: "Action, process", words: ["-ion"] },
+        { definition: "Foot", words: ["ped", "pod"] },
+        { definition: "Hand", words: ["man", "manu", "chiro"] }
+    ],
+    q4: [
+        { definition: "See, look", words: ["spec", "spic", "vid", "vis", "scop"] },
+        { definition: "Speak", words: ["dict", "loc", "loqu"] },
+        { definition: "Writing", words: ["graph", "gram"] },
+        { definition: "Write", words: ["scrib", "script"] },
+        { definition: "Believe", words: ["cred"] },
+        { definition: "Good, well", words: ["ben", "bene", "bon", "eu"] },
+        { definition: "Life", words: ["bio", "vit", "viv"] },
+        { definition: "Land; earth", words: ["terr", "terra", "geo"] },
+        { definition: "Sea, ship", words: ["naut", "nav", "mar"] },
+        // Simulated Weeks 32-36 Filler
+        { definition: "Carry", words: ["port", "fer"] },
+        { definition: "Break", words: ["rupt", "fract"] },
+        { definition: "Sound", words: ["phon", "son"] },
+        { definition: "Build", words: ["struct", "stru"] },
+        { definition: "Heat", words: ["therm"] },
+        { definition: "Send", words: ["mit", "miss"] },
+        { definition: "Throw", words: ["ject"] },
+        { definition: "Pull", words: ["tract"] }
+    ],
+    q5: [
+        { definition: "All", words: ["omni", "pan"] }, { definition: "Kill", words: ["cide"] },
+        { definition: "Body", words: ["corp", "phys"] }, { definition: "Sleep", words: ["dorm", "somn"] },
+        { definition: "New", words: ["nov", "neo"] }, { definition: "Place", words: ["loc", "top"] },
+        { definition: "Point", words: ["punct"] }, { definition: "Truth", words: ["ver"] },
+        { definition: "Eat", words: ["vor", "phag"] }, { definition: "Move", words: ["mob", "mot", "kin"] },
+        { definition: "City", words: ["urb", "poli"] }, { definition: "War", words: ["bell"] },
+        { definition: "Peace", words: ["pac"] }, { definition: "To know", words: ["sci", "cogn"] },
+        { definition: "Love", words: ["phil", "am"] }, { definition: "Head", words: ["cap", "ceph"] },
+        { definition: "Color", words: ["chrom"] }, { definition: "Star", words: ["astr", "stell"] },
+        { definition: "Shape", words: ["morph", "form"] }, { definition: "End", words: ["fin", "term"] }
+    ]
+};
+
+/* --- DATA: BEGINNER (Strict PDF Sync) --- */
+const DictionaryBeginner = {
+    // Q1: Weeks 1-7 + first half of W6-9 block
+    q1: [
+        { definition: "Before, in advance", words: ["Pre-"] }, { definition: "After", words: ["Post-"] },
+        { definition: "One", words: ["Mono-"] }, { definition: "Many", words: ["Poly-"] },
+        { definition: "One", words: ["Uni-"] }, { definition: "Two", words: ["Bi-"] },
+        { definition: "Three", words: ["Tri-"] }, { definition: "Four", words: ["Quad-"] },
+        { definition: "Together, with", words: ["Co-", "Com-"] },
+        { definition: "Against, opposite", words: ["Contra-", "Counter-"] },
+        { definition: "Under, below", words: ["Sub-"] },
+        { definition: "Over, above, beyond", words: ["Super-", "Sur-"] },
+        { definition: "Not, none", words: ["Un-", "Dis-"] }
+    ],
+    // Q2: Weeks 8-15
+    q2: [
+        { definition: "Between, among", words: ["Inter-"] }, { definition: "Within, inside", words: ["Intra-"] },
+        { definition: "Round, around", words: ["Circ-", "Circum-"] }, { definition: "Across, through", words: ["Trans-"] },
+        { definition: "Bad, badly, wrong, ill", words: ["Mal-"] },
+        { definition: "Bad, badly, wrong", words: ["Mis-"] }, { definition: "Again, back", words: ["Re-"] },
+        { definition: "Together, same", words: ["Sym-", "Syn-"] },
+        { definition: "Under, below, less", words: ["Hypo-"] }, { definition: "Over, beyond, high", words: ["Hyper-"] },
+        { definition: "Able to be", words: ["-able"] }, { definition: "Without", words: ["-less"] },
+        { definition: "Study of", words: ["-ology"] }, { definition: "Fear of", words: ["-phobia"] },
+        { definition: "A person who", words: ["-ian", "-or"] },
+        { definition: "State or quality of", words: ["-ance", "-ence"] }
+    ],
+    // Q3: Weeks 16-26
+    q3: [
+        { definition: "Out, out of, outside", words: ["Ex-", "E-"] }, { definition: "In, inside, into", words: ["In-"] },
+        { definition: "Not", words: ["Non-"] }, { definition: "Not", words: ["Im-", "In-", "Ir-", "Il-"] },
+        { definition: "For, in favor of, forward, positive", words: ["Pro-"] },
+        { definition: "Backward, back", words: ["Retro-"] }, { definition: "Against, opposite", words: ["An-", "Anti-"] },
+        { definition: "Away, from", words: ["Ab-"] }, { definition: "Toward, to", words: ["Ad-"] },
+        { definition: "Down, out", words: ["De-"] }, { definition: "Away, not, negative", words: ["Dis-", "Dys-", "Dif-"] },
+        { definition: "Equal, same", words: ["Equ-", "Equi-"] }, { definition: "Half, halfway", words: ["Hemi-", "Semi-"] },
+        { definition: "Many", words: ["Multi-"] }, { definition: "Self", words: ["Auto-", "Self-"] },
+        { definition: "Tiny, very small", words: ["Micro-"] },
+        { definition: "Large, great", words: ["Mega-", "Megal-", "Megalo-"] },
+        { definition: "The state, quality, or condition of something", words: ["-ness"] },
+        { definition: "A person who", words: ["-ist"] }, { definition: "Somewhat, related to, having a characteristic of", words: ["-ish"] },
+        { definition: "Full of, characterized by", words: ["-ful"] },
+        { definition: "Action, process, state or condition", words: ["-ion"] },
+        { definition: "Foot", words: ["ped"] }, { definition: "Hand", words: ["man", "manu"] }
+    ],
+    // Q4: Weeks 27-31 (Strict PDF)
+    q4: [
+        { definition: "See, look", words: ["spec"] }, { definition: "Speak", words: ["dict"] },
+        { definition: "Writing", words: ["graph"] }, { definition: "Write", words: ["scrib", "script"] },
+        { definition: "Believe", words: ["cred"] },
+        { definition: "Good, well", words: ["ben", "bene", "bon"] }, { definition: "Life", words: ["bio"] }, { definition: "Live, life", words: ["vit", "viv"] },
+        { definition: "Land; earth", words: ["terr", "terra", "geo"] },
+        { definition: "Relating to the sea, ships, or travelers", words: ["naut", "naus", "nav"] }
+    ],
+q5: [ { definition: "All", words: ["omni", "pan"] }, { definition: "Kill", words: ["cide"] }, { definition: "Body", words: ["corp", "phys"] }, { definition: "Sleep", words: ["dorm", "somn"] }, { definition: "New", words: ["nov", "neo"] }, { definition: "Place", words: ["loc", "top"] }, { definition: "Point", words: ["punct"] }, { definition: "Truth", words: ["ver"] }, { definition: "Eat", words: ["vor", "phag"] }, { definition: "Move", words: ["mob", "mot", "kin"] }, { definition: "City", words: ["urb", "poli"] }, { definition: "War", words: ["bell"] }, { definition: "Peace", words: ["pac"] }, { definition: "To know", words: ["sci", "cogn"] }, { definition: "Love", words: ["phil", "am"] }, { definition: "Head", words: ["cap", "ceph"] }, { definition: "Color", words: ["chrom"] }, { definition: "Star", words: ["astr", "stell"] }, { definition: "Shape", words: ["morph", "form"] }, { definition: "End", words: ["fin", "term"] } ]};
+
+const Ranks = [
+    { name: "ROOKIE", xp: 0, reward: "None" },
+    { name: "CADET", xp: 5000, reward: "Unlock: Titan Ship" },
+    { name: "PILOT", xp: 15000, reward: "Unlock: Phantom Ship" },
+    { name: "ACE", xp: 30000, reward: "Visual: Retro Mode" },
+    { name: "COMMANDER", xp: 50000, reward: "Unlock: Coin Magnet" },
+    { name: "CAPTAIN", xp: 80000, reward: "Visual: Night Vision" },
+    { name: "COMMODORE", xp: 120000, reward: "Weapon: Plasma Wave" },
+    { name: "ADMIRAL", xp: 180000, reward: "Bonus: Start with +1 Life" },
+    { name: "LEGEND", xp: 250000, reward: "Visual: Gold Skin" },
+    { name: "DEMIGOD", xp: 500000, reward: "Cheat: God Mode" }
+];
+
+const State = {
+    credits: 0, totalXp: 0,
+    ships: { 'default': { name: "Striker", speed: 0.6, drag: 0.94 }, 'speed': { name: "Interceptor", speed: 0.9, drag: 0.96 }, 'tank': { name: "Vanguard", speed: 0.4, drag: 0.92 }, 'phantom': { name: "Phantom", speed: 1.0, drag: 0.98 }, 'titan': { name: "The Titan", speed: 0.3, drag: 0.88 } },
+    ownedShips: ['default'], currentShip: 'default',
+    weapons: ['single'], currentWeapon: 'single',
+    upgrades: { maxHp: 3, scavenger: false, magnet: false, godMode: false },
+    activeFilter: '',
+    codex: {}, difficulty: 'beginner',
+pet: { active: false, type: 'none', level: 0, xp: 0, stats: { life: 0, time: 0, force: 0 } },    // NEW: BOSS & VOICE DATA
+    boss: { active: false, type: 0, hp: 0, maxHp: 100, x: 0, y: 0, vx: 2, timer: 0 },
+    voice: { enabled: true, rate: 1.0, pitch: 1.0 }
+};
+
+const ShopItems = {
+    ships: [
+        { id: 'speed', name: 'INTERCEPTOR', cost: 1200, desc: "High mobility." },
+        { id: 'tank', name: 'VANGUARD', cost: 1800, desc: "Heavy Plating." },
+        { id: 'phantom', name: 'PHANTOM', cost: 3000, desc: "Requires PILOT Rank." },
+        { id: 'titan', name: 'THE TITAN', cost: 4000, desc: "Requires CADET Rank." }
+    ],
+    weapons: [
+        { id: 'spread', name: 'TRIPLE SHOT', cost: 1000, desc: "Wide coverage." },
+        { id: 'rapid', name: 'AUTO CANNON', cost: 1500, desc: "Fast fire rate." },
+        { id: 'plasma', name: 'PLASMA WAVE', cost: 2500, desc: "Requires COMMODORE Rank." }
+    ],
+    mods: [
+        { id: 'hp1', name: 'HULL UPGRADE 1', cost: 800, desc: "+1 Max Shield" },
+        { id: 'hp2', name: 'HULL UPGRADE 2', cost: 1600, desc: "+1 Max Shield" },
+        { id: 'scav', name: 'SCAVENGER', cost: 2000, desc: "Drops are worth 2x." },
+        { id: 'magnet', name: 'COIN MAGNET', cost: 2500, desc: "Requires COMMANDER Rank." }
+    ],
+pets: [
+        // FORCE TYPE (Drone)
+        { id: 'drone_1', name: 'DRONE CORE', cost: 1500, desc: "OFFENSIVE: Fires at aliens. Unlock to begin evolution." },
+        { id: 'drone_2', name: 'DRONE EVOLUTION II', cost: 6000, desc: "Faster fire rate and improved targeting." },
+        { id: 'drone_3', name: 'DRONE EVOLUTION III', cost: 20000, desc: "MAX: Rapid-fire plasma bolts." },
+        
+        // LIFE TYPE (Wisp)
+        { id: 'wisp_1', name: 'WISP CORE', cost: 1500, desc: "DEFENSIVE: Heals your shields. Unlock to begin evolution." },
+        { id: 'wisp_2', name: 'WISP EVOLUTION II', cost: 6000, desc: "Faster healing cycles." },
+        { id: 'wisp_3', name: 'WISP EVOLUTION III', cost: 20000, desc: "MAX: Rapid shield regeneration." },
+        
+        // TIME TYPE (Cube)
+        { id: 'cube_1', name: 'CUBE CORE', cost: 1500, desc: "SUPPORT: Slows down all enemies. Unlock to begin evolution." },
+        { id: 'cube_2', name: 'CUBE EVOLUTION II', cost: 6000, desc: "Stronger temporal slowing field." },
+        { id: 'cube_3', name: 'CUBE EVOLUTION III', cost: 20000, desc: "MAX: Significant enemy speed reduction." }
+    ]
+};
+
+/* --- PET SYSTEM --- */
+const PetSystem = {
+    x: 0, y: 0, cooldown: 0,
+    cats: {
+        life: ['bio','vit','viv','corp','phys','gen','nat','derm','ped','pod','man','manu','bene','bon','phil','am','cap','ceph'],
+        time: ['chron','temp','loc','top','sci','cogn','graph','gram','scrib','dict','spec','geo','terr','nov','neo','astr','stell'],
+        force: ['bell','cide','rupt','fract','phon','struct','mit','miss','ject','tract','mob','mot','kin','mal','mis','anti','contra']
+    },
+    init: () => { PetSystem.x = Game.width/2; PetSystem.y = Game.height-100; },
+    
+feed: (word) => {
+        if(State.pet.type !== 'none' && State.pet.level < 3) {
+            State.pet.xp += 10;
+            // XP Requirement increased: Level 1 needs 200XP, Level 2 needs 500XP
+            let xpNeeded = State.pet.level === 1 ? 200 : 500;
+            if(State.pet.xp >= xpNeeded) {
+                State.pet.level++;
+                State.pet.xp = 0; 
+                AudioSys.powerup();
+                Game.particles.push({x:PetSystem.x, y:PetSystem.y, vx:0, vy:-1, life:60, color:'#fff', type:'text', text:"LEVEL UP!"});
+            }
+            return;
+        }
+        let found = false;
+        for(let k in PetSystem.cats) {
+            if(PetSystem.cats[k].some(r => word.toLowerCase().includes(r))) {
+                State.pet.stats[k]++; found = true; break;
+            }
+        }
+        if(!found) State.pet.stats.force++;
+        if(State.pet.type === 'none') {
+            const total = State.pet.stats.life + State.pet.stats.time + State.pet.stats.force;
+            if(total >= 10) { 
+                if(State.pet.stats.life > 4) State.pet.type = 'wisp';
+                else if(State.pet.stats.time > 4) State.pet.type = 'cube';
+                else State.pet.type = 'drone';
+                State.pet.active = true; AudioSys.warp();
+                Game.particles.push({x:PetSystem.x, y:PetSystem.y, vx:0, vy:-1, life:100, color:'#fff', type:'text', text:"PET EVOLVED!"});
+            }
+        }
+    },
+
+update: () => {
+        if(!State.pet.active || (State.pet.type === 'none' && State.pet.stats.life + State.pet.stats.time + State.pet.stats.force < 1)) return;
+        
+        const targetX = Game.player.x - 50; 
+        const targetY = Game.player.y - 20;
+        PetSystem.x += (targetX - PetSystem.x) * 0.08;
+        PetSystem.y += (targetY - PetSystem.y) * 0.08;
+        
+        if(!State.pet.active) return;
+        PetSystem.cooldown--;
+
+        // Only process offensive Drone behavior
+        if(State.pet.type === 'drone' && PetSystem.cooldown <= 0) {
+            // FIRE RATE HALVED: Doubled delay from 120 to 240
+            let fireRate = 240 - (State.pet.level * 60); 
+            
+            // TARGETING FIXED: Buddy now searches for 'alien' types only
+            let target = Game.enemies.find(e => e.type === 'alien');
+            
+            if(target) {
+                let angle = Math.atan2(target.y - PetSystem.y, target.x - PetSystem.x);
+                Game.bullets.push({ 
+                    x: PetSystem.x, 
+                    y: PetSystem.y, 
+                    vx: Math.cos(angle)*10, 
+                    speed: -Math.sin(angle)*10, 
+                    color: '#ff3131',
+                    isPetBullet: true 
+                });
+                PetSystem.cooldown = fireRate;
+            }
+        } else if(State.pet.type === 'wisp' && PetSystem.cooldown <= 0) {
+            if(Game.player.hp < Game.player.maxHp) {
+                let healRate = 1000 - (State.pet.level * 200);
+                Game.player.hp++; 
+                UI.updateShields(); 
+                Game.particles.push({x:PetSystem.x, y:PetSystem.y, vx:0, vy:-1, life:60, color:'#0f0', type:'text', text:"HEAL"});
+                PetSystem.cooldown = healRate;
+            }
+        }
+    },
+
+    draw: (ctx) => {
+        if(State.pet.type === 'none' && State.pet.stats.life + State.pet.stats.time + State.pet.stats.force < 1) return;
+        ctx.save(); ctx.translate(PetSystem.x, PetSystem.y);
+        if(State.pet.active) {
+            ctx.fillStyle = '#ffd700';
+            for(let i=0; i<State.pet.level; i++) { ctx.beginPath(); ctx.arc(-10 + (i*10), -25, 2, 0, Math.PI*2); ctx.fill(); }
+        }
+        if(State.pet.type === 'none') {
+            ctx.fillStyle = `rgba(255,255,255,${0.5 + Math.sin(Date.now()/300)*0.2})`; ctx.beginPath(); ctx.arc(0,0,8,0,Math.PI*2); ctx.fill();
+        } else if (State.pet.type === 'wisp') {
+            ctx.shadowBlur = 10; ctx.shadowColor = '#00ff41'; ctx.fillStyle = '#00ff41';
+            ctx.beginPath(); ctx.arc(0,0, 6 + Math.sin(Date.now()/200)*2, 0, Math.PI*2); ctx.fill();
+        } else if (State.pet.type === 'cube') {
+            ctx.shadowBlur = 10; ctx.shadowColor = '#00f3ff'; ctx.strokeStyle = '#00f3ff'; ctx.lineWidth = 2;
+            ctx.rotate(Date.now()/500); ctx.strokeRect(-6,-6,12,12);
+        } else if (State.pet.type === 'drone') {
+            ctx.shadowBlur = 10; ctx.shadowColor = '#ff3131'; ctx.fillStyle = '#ff3131';
+            ctx.beginPath(); ctx.moveTo(0,-8); ctx.lineTo(6,4); ctx.lineTo(-6,4); ctx.fill();
+        }
+        ctx.restore();
+    }
+};
+
+/* --- VOICE SYSTEM --- */
+const VoiceSys = {
+    speak: (text) => {
+        if(!State.voice.enabled || !window.speechSynthesis) return;
+        window.speechSynthesis.cancel(); // Stop previous
+        const u = new SpeechSynthesisUtterance(text);
+        u.rate = 1.1; u.pitch = 0.8; // Robotic effect
+        u.volume = 0.5;
+        window.speechSynthesis.speak(u);
+    }
+};
+
+/* --- BOSS SYSTEM --- */
+const BossSystem = {
+    spawn: (quarter) => {
+        State.boss.active = true;
+        State.boss.type = quarter;
+        State.boss.maxHp = 20 + (quarter * 10);
+        State.boss.hp = State.boss.maxHp;
+        State.boss.x = Game.width / 2;
+        State.boss.y = -100; // Fly in from top
+        State.boss.timer = 0;
+        
+        // Clear screen for dramatic entrance
+        Game.enemies = []; 
+        Game.enemyBullets = [];
+        
+        VoiceSys.speak(`WARNING. QUARTER ${quarter} GUARDIAN DETECTED.`);
+        Game.warpTimer = 0; Game.inWarp = false; document.getElementById('warp-msg').classList.add('hidden'); // Cancel warp if active
+    },
+
+    update: () => {
+        if(!State.boss.active) return;
+        const b = State.boss;
+        b.timer++;
+
+        // 1. Movement (Entrance -> Hover)
+        if(b.y < 100) b.y += 2;
+        else {
+            b.x += b.vx;
+            if(b.x < 50 || b.x > Game.width - 50) b.vx *= -1;
+            b.y = 100 + Math.sin(b.timer / 50) * 20; // Bobbing
+        }
+
+        // 2. Attacks
+        let fireRate = 60; // 1 second
+        if(b.type === 2) fireRate = 40; // Faster for glitch boss
+        
+        if(b.timer % fireRate === 0) {
+            AudioSys.enemyShoot();
+            if(b.type === 1) { // Eye Beam
+                Game.enemyBullets.push({x:b.x, y:b.y+40, vx:0, speed:6, color:'#f00', size: 8});
+            } else if(b.type === 2) { // Glitch Spray
+                for(let k=0; k<3; k++) Game.enemyBullets.push({x:b.x, y:b.y, vx:(Math.random()-0.5)*5, speed:5, color:'#0f0'});
+            } else if(b.type === 3) { // Construction Rain
+                Game.enemyBullets.push({x:b.x-40, y:b.y, vx:0, speed:4, color:'#ff0'});
+                Game.enemyBullets.push({x:b.x+40, y:b.y, vx:0, speed:4, color:'#ff0'});
+            } else { // Terra Moons
+                for(let k=0; k<6; k++) {
+                    let a = (Math.PI*2/6)*k + b.timer;
+                    Game.enemyBullets.push({x:b.x, y:b.y, vx:Math.cos(a)*3, speed:Math.sin(a)*3+3, color:'#fff'});
+                }
+            }
+        }
+
+        // 3. Collision with Player
+        if(Math.abs(b.x - Game.player.x) < 60 && Math.abs(b.y - Game.player.y) < 60) {
+             if(!Game.feverActive) Game.takeDamage();
+        }
+    },
+
+    draw: (ctx) => {
+        if(!State.boss.active) return;
+        const b = State.boss;
+        ctx.save(); ctx.translate(b.x, b.y);
+        
+        // Health Bar
+        ctx.fillStyle = '#500'; ctx.fillRect(-50, -60, 100, 10);
+        ctx.fillStyle = '#f00'; ctx.fillRect(-50, -60, 100 * (b.hp/b.maxHp), 10);
+
+        // BOSS GRAPHICS
+        if(b.type === 1) { // PRIMAL EYE
+            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0,0,40,0,Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(0,0,15,0,Math.PI*2); ctx.fill(); // Pupil
+            ctx.strokeStyle = '#0ff'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(0,0,50 + Math.sin(b.timer/10)*5, 0, Math.PI*2); ctx.stroke();
+        } else if (b.type === 2) { // MAL-FUNCTION
+            ctx.fillStyle = '#0f0'; 
+            for(let i=0; i<5; i++) ctx.fillRect(-40 + Math.random()*80, -40 + Math.random()*80, 20, 20);
+            ctx.strokeStyle = '#f00'; ctx.strokeRect(-45, -45, 90, 90);
+        } else if (b.type === 3) { // OMNI-STRUCT
+            ctx.fillStyle = '#888'; ctx.fillRect(-40, -40, 80, 80);
+            ctx.fillStyle = '#ff0'; ctx.fillRect(-60, 0, 20, 40); ctx.fillRect(40, 0, 20, 40); // Arms
+        } else { // TERRA-LORD
+            ctx.fillStyle = '#00f'; ctx.beginPath(); ctx.arc(0,0,35,0,Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#0f0'; ctx.beginPath(); ctx.arc(-10,-10,15,0,Math.PI*2); ctx.fill(); // Continent
+            // Orbiting Moons
+            ctx.fillStyle = '#888';
+            let a = b.timer/20;
+            ctx.beginPath(); ctx.arc(Math.cos(a)*60, Math.sin(a)*60, 10, 0, Math.PI*2); ctx.fill();
+        }
+        ctx.restore();
+    }
+};
+
+/* --- GAME ENGINE --- */
+const Game = {
+    canvas: null, ctx: null, width: 0, height: 0,
+    active: false, paused: false,
+    player: null, bullets: [], enemyBullets: [], enemies: [], particles: [], drops: [],
+    waveData: [], target: null, spawnTimer: 0, score: 0, mistakes: [], bgOffset: 0,
+    fever: 0, feverActive: false, feverTimer: 0,
+    waveCount: 0, inWarp: false, warpTimer: 0, warpSpawnTimer: 0,
+    activeAbility: null, abilityTimer: 0,
+
+    init: () => {
+        Game.canvas = document.getElementById('gameCanvas');
+        Game.ctx = Game.canvas.getContext('2d');
+        window.addEventListener('resize', Game.resize);
+        Game.resize(); Input.init(); Game.loadData(); UI.updateRankDisplay(); Game.bgLoop();
+        PetSystem.init();
+    },
+    resize: () => { Game.width = window.innerWidth; Game.height = window.innerHeight; Game.canvas.width = Game.width; Game.canvas.height = Game.height; },
+    
+    saveData: () => {
+        localStorage.setItem('neonRootsSave', JSON.stringify({
+            credits: State.credits, totalXp: State.totalXp, ownedShips: State.ownedShips, currentShip: State.currentShip,
+            weapons: State.weapons, currentWeapon: State.currentWeapon, upgrades: State.upgrades, activeFilter: State.activeFilter, codex: State.codex, difficulty: State.difficulty, pet: State.pet
+        }));
+        UI.updateRankDisplay();
+    },
+loadData: () => {
+        const d = JSON.parse(localStorage.getItem('neonRootsSave'));
+        if(d) {
+            State.credits = d.credits||0; State.totalXp = d.totalXp||0; State.ownedShips = d.ownedShips||['default'];
+            State.currentShip = d.currentShip||'default'; State.weapons = d.weapons||['single']; State.currentWeapon = d.currentWeapon||'single';
+            State.upgrades = d.upgrades||{maxHp:3}; State.activeFilter = d.activeFilter||''; State.codex = d.codex||{};
+            if(d.difficulty) State.difficulty = d.difficulty;
+            if(d.pet) State.pet = d.pet;
+            if(State.activeFilter) document.body.className = State.activeFilter;
+        }
+
+        // --- NEW: Force UI to match the current difficulty ---
+        const btn = document.getElementById('diff-toggle');
+        if (State.difficulty === 'beginner') {
+            btn.classList.remove('advanced');
+            btn.textContent = "MODE: BEGINNER";
+            btn.style.color = "var(--neon-green)";
+            btn.style.borderColor = "var(--neon-green)";
+            btn.style.background = "rgba(0, 255, 65, 0.1)";
+        } else {
+            btn.classList.add('advanced');
+            btn.textContent = "MODE: ADVANCED";
+            btn.style.color = "var(--neon-pink)";
+            btn.style.borderColor = "var(--neon-pink)";
+            btn.style.background = "rgba(255, 0, 255, 0.1)";
+        }
+    },
+    
+    start: (level) => {
+        document.getElementById('main-menu').classList.add('hidden'); document.getElementById('ui-layer').classList.remove('hidden');
+        AudioSys.init();
+        let sourceDict = State.difficulty === 'beginner' ? DictionaryBeginner : DictionaryAdvanced;
+        let d = [];
+        if(level===1) d=sourceDict.q1; else if(level===2) d=sourceDict.q2; else if(level===3) d=sourceDict.q3; else if(level===4) d=sourceDict.q4;
+        else if(level===5) d=sourceDict.q5; else d=[...sourceDict.q1,...sourceDict.q2,...sourceDict.q3,...sourceDict.q4];
+        Game.waveData = d; Game.reset(); Game.active = true; Game.loop();
+    },
+    
+    reset: () => {
+        const stats = State.ships[State.currentShip];
+        let hp = State.upgrades.maxHp; if(State.currentShip === 'titan') hp += 2; if(State.totalXp >= 180000) hp += 1;
+        Game.player = { x: Game.width/2, y: Game.height-100, vx: 0, vy: 0, w: 40, h: 40, hp: hp, maxHp: hp, stats: stats, cd: 0, trails: [] };
+        Game.score = 0; Game.enemies = []; Game.bullets = []; Game.enemyBullets = []; Game.drops = []; Game.particles = []; Game.mistakes = [];
+        Game.fever = 0; Game.feverActive = false; Game.feverTimer = 0;
+        Game.waveCount = 0; Game.inWarp = false; Game.warpTimer = 0;
+        Game.activeAbility = null; Game.abilityTimer = 0;
+        UI.updateShields(); UI.updateFever(); Game.pickTarget();
+        PetSystem.init();
+    },
+    
+    quit: () => {
+        Game.active = false; Game.paused = false;
+        document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+        document.getElementById('ui-layer').classList.add('hidden');
+        document.getElementById('main-menu').classList.remove('hidden');
+        Game.saveData(); Game.bgLoop(); 
+    },
+    
+pickTarget: () => {
+        Game.target = Game.waveData[Math.floor(Math.random()*Game.waveData.length)];
+        document.getElementById('target-def').textContent = Game.target.definition.toUpperCase();
+        
+        // NEW: Voice Trigger
+        VoiceSys.speak("TARGET: " + Game.target.definition);
+        
+        const box = document.getElementById('target-box');
+        box.style.background = 'linear-gradient(to top, rgba(0,255,65,0.4), transparent)';
+        setTimeout(()=>box.style.background='linear-gradient(to top, rgba(0,0,0,0.9), transparent)', 300);
+    },
+    
+    togglePause: () => {
+        Game.paused = !Game.paused;
+        document.getElementById('pause-screen').classList.toggle('hidden', !Game.paused);
+    },
+
+    spawnEntity: () => {
+        // Drop Ability Chance (1%)
+        if(Math.random() < 0.01) {
+            const types = ['time', 'shield', 'ghost'];
+            const type = types[Math.floor(Math.random()*types.length)];
+            const x = Math.random()*(Game.width-40)+20;
+            Game.drops.push({ x:x, y:-20, vx:0, vy:2, val:0, type:type });
+            return;
+        }
+
+        if(Math.random() < 0.6) { // Word
+            const isCorrect = Math.random() < 0.4;
+            let word = "";
+            if(isCorrect) word = Game.target.words[Math.floor(Math.random()*Game.target.words.length)];
+            else {
+                let w = Game.waveData[Math.floor(Math.random()*Game.waveData.length)];
+                while(w === Game.target) w = Game.waveData[Math.floor(Math.random()*Game.waveData.length)];
+                word = w.words[Math.floor(Math.random()*w.words.length)];
+            }
+            // Update Codex Seen
+            if(!State.codex[word]) State.codex[word] = {seen: true, correct: 0};
+            
+            // Elite chance (5%)
+            const isElite = Math.random() < 0.05;
+            
+            Game.enemies.push({
+                type: 'word', text: word, isTarget: isCorrect, isElite: isElite,
+                x: Math.random()*(Game.width-100)+50, y: -50, w: word.length*14+40, h: 40,
+                speed: Math.random()*0.5 + 0.5, hp: isElite ? 2 : 1
+            });
+        } else { // Alien
+            Game.enemies.push({
+                type: 'alien', x: Math.random()*(Game.width-60)+30, y: -50, w: 30, h: 30,
+                vx: (Math.random()-0.5)*3, 
+                // SLOWED DOWN: 2.0 max speed
+                vy: 0.7 + Math.random(), 
+                hp: 1, timer: 0
+            });
+        }
+    },
+
+    activateAbility: (type) => {
+        Game.activeAbility = type;
+        Game.abilityTimer = 300; // 5 seconds
+        AudioSys.powerup();
+        if(type === 'shield') { Game.enemyBullets = []; Game.createExplosion(Game.width/2, Game.height/2, '#0f0'); }
+        const text = type === 'time' ? "TIME SLOW" : (type === 'shield' ? "SHIELD BURST" : "GHOST MODE");
+        Game.particles.push({x:Game.player.x, y:Game.player.y-50, vx:0, vy:-1, life:60, color:'#fff', type:'text', text:text});
+    },
+
+    update: () => {
+        if(!Game.active || Game.paused) return;
+        
+        // PET UPDATE
+        PetSystem.update();
+
+        // BOSS UPDATE
+BossSystem.update();
+
+// BOSS SPAWN CHECK (Every 50 correct words/score or manual wave count)
+// Simplifying: Spawn boss every 2000 score points approx
+if(!State.boss.active && !Game.inWarp && Game.score > 0 && Game.score % 2000 === 0 && Game.score % 2000 < 150) {
+    let q = Math.floor(Game.score / 2000); 
+    if(q > 4) q = 4;
+    BossSystem.spawn(q);
+}
+
+        // WARP MODE LOGIC
+        if(Game.inWarp) {
+            Game.bgOffset += 10; // Slower visual drift
+            Game.warpTimer--; 
+            Game.warpSpawnTimer++;
+            
+            if(Game.warpSpawnTimer > 15) {
+                Game.warpSpawnTimer = 0;
+                if(Math.random() < 0.7) { 
+                    Game.drops.push({ x: Math.random()*Game.width, y: -20, vx: 0, vy: 3, val: 50, type: 'coin' });
+                } else { 
+                    Game.enemies.push({ type: 'asteroid', x: Math.random()*Game.width, y: -50, w: 40, h: 40, vy: 4, hp: 999 });
+                }
+            }
+
+if(Game.warpTimer <= 0) {
+                Game.inWarp = false; 
+                document.getElementById('warp-msg').classList.add('hidden');
+                // CLEANUP: Force all asteroids to vanish immediately
+                Game.enemies = Game.enemies.filter(e => e.type !== 'asteroid');
+                VoiceSys.speak("WARP COMPLETE. RESUMING MISSION.");
+            }
+        } else {
+            Game.bgOffset += (Game.feverActive ? 8 : 2);
+            Game.waveCount++;
+        }
+        
+        // Check Warp Trigger (Every ~1500 frames approx 25s)
+// Trigger every 3600 frames (60 seconds) for 600 frames (10 seconds)
+        if(!Game.inWarp && Game.waveCount % 3600 === 0 && Game.waveCount > 0) {
+            Game.inWarp = true;
+            Game.warpTimer = 600; 
+            document.getElementById('warp-msg').classList.remove('hidden'); 
+            AudioSys.warp();
+            // Clear standard enemies to prevent overlaps
+            Game.enemies = []; Game.bullets = []; Game.enemyBullets = [];
+        }
+
+        // --- PLAYER ---
+        const p = Game.player;
+        let speed = p.stats.speed; if(Game.feverActive) speed *= 1.5;
+        if(Input.keys.left) p.vx -= speed; if(Input.keys.right) p.vx += speed;
+        if(Input.keys.up) p.vy -= speed; if(Input.keys.down) p.vy += speed;
+        if(Input.touchX !== null) { p.vx += (Input.touchX-p.x)*0.08; p.vy += (Input.touchY-p.y)*0.08; }
+        
+        p.x += p.vx; p.y += p.vy; p.vx *= p.stats.drag; p.vy *= p.stats.drag;
+        
+        const minY = Game.height * 0.6;
+        if(p.x<20) p.x=20; if(p.x>Game.width-20) p.x=Game.width-20;
+        if(p.y>Game.height-40) p.y=Game.height-40; if(p.y<minY) p.y=minY;
+
+        if(Game.feverActive) { Game.feverTimer--; if(Game.feverTimer<=0) { Game.feverActive=false; Game.fever=0; UI.updateFever(); } }
+        if(Game.activeAbility) { Game.abilityTimer--; if(Game.abilityTimer<=0) Game.activeAbility=null; }
+
+        if(p.cd > 0) p.cd--;
+        if(!Game.inWarp && (Input.keys.space || Input.touching) && p.cd <= 0) Game.fire();
+
+        // --- ENTITIES UPDATE ---
+        p.trails.push({x:p.x, y:p.y+20, life:10});
+        for(let i=p.trails.length-1; i>=0; i--) { p.trails[i].y+=2; p.trails[i].life--; if(p.trails[i].life<=0) p.trails.splice(i,1); }
+
+        for(let i=Game.bullets.length-1; i>=0; i--) {
+            let bul = Game.bullets[i]; // <--- Define 'bul' here first!
+
+            if(State.boss.active) {
+                let boss = State.boss;
+                if(bul.x > boss.x - 50 && bul.x < boss.x + 50 && bul.y > boss.y - 50 && bul.y < boss.y + 50) {
+                    // ... rest of your boss code ...
+        Game.bullets.splice(i,1); // Remove bullet
+        b.hp--;
+        AudioSys.hit();
+        Game.createExplosion(bul.x, bul.y, '#fff');
+        if(b.hp <= 0) {
+            State.boss.active = false;
+            Game.createExplosion(b.x, b.y, '#ffd700');
+            Game.score += 1000; // Big Points
+            VoiceSys.speak("TARGET DESTROYED. RESUMING PATROL.");
+        }
+        continue; // Next bullet
+    }
+}
+
+            let b = Game.bullets[i]; b.y -= b.speed; b.x += b.vx;
+            let hit = false;
+            for(let j=Game.enemies.length-1; j>=0; j--) {
+                let e = Game.enemies[j];
+                if(e.type === 'asteroid') continue;
+                if(b.x > e.x - e.w/2 && b.x < e.x + e.w/2 && b.y > e.y && b.y < e.y + e.h) {
+                    Game.bullets.splice(i,1); hit=true; Game.hitEnemy(j); break;
+                }
+            }
+            if(!hit && b.y < 0) Game.bullets.splice(i,1);
+        }
+
+        for(let i=Game.enemyBullets.length-1; i>=0; i--) {
+            let b = Game.enemyBullets[i]; let spd = b.speed; if(Game.activeAbility === 'time') spd *= 0.5;
+            b.y += spd; b.x += b.vx;
+            if(Math.sqrt((b.x-p.x)**2 + (b.y-p.y)**2) < 20 && !Game.feverActive && !State.upgrades.godMode && Game.activeAbility !== 'ghost') {
+                Game.enemyBullets.splice(i,1); Game.takeDamage();
+            } else if (b.y > Game.height) Game.enemyBullets.splice(i,1);
+        }
+
+if(!Game.inWarp && !State.boss.active) { // Added !State.boss.active check
+    Game.spawnTimer++;
+            let rate = 150; if(Game.feverActive) rate = 15; if(Game.activeAbility === 'time') rate = 180;
+            if(Game.spawnTimer > rate) { Game.spawnEntity(); Game.spawnTimer = 0; }
+        }
+
+        for(let i=Game.enemies.length-1; i>=0; i--) {
+            let e = Game.enemies[i];
+            
+            // 1. CALCULATE SLOW FACTOR
+            // If Blue Pet (Cube) is active, slow by 15% per level
+            let slowFactor = (State.pet.type === 'cube' && State.pet.active) ? (1.0 - (State.pet.level * 0.15)) : 1.0;
+            // If Time Ability is active, slow by another 50%
+            if(Game.activeAbility === 'time') slowFactor *= 0.5;
+
+            // 2. MOVE ENEMIES
+            if(e.type === 'asteroid') {
+                e.y += e.vy; // Asteroids ignore slow
+                if(Math.abs(e.x - p.x) < 40 && Math.abs(e.y - p.y) < 40 && !State.upgrades.godMode) { Game.takeDamage(); Game.enemies.splice(i,1); }
+            } else if(e.type === 'word') {
+                e.y += e.speed * slowFactor;
+            } else {
+                // ALIEN
+                e.y += e.vy * slowFactor;
+                e.x += Math.sin(e.y/40) * 3;
+                if(e.y > 0 && e.y < Game.height && Math.random() < 0.002) {
+                    AudioSys.enemyShoot(); Game.enemyBullets.push({ x:e.x, y:e.y+15, vx:0, speed:4 });
+                }
+            }
+            
+            // 3. COLLISION
+// Only check physical player collision if it's an ALIEN, not a word
+if(e.type === 'alien' && Math.abs(e.x - p.x) < (e.w/2 + 20) && Math.abs(e.y - p.y) < (e.h/2 + 20)) {                if(Game.feverActive || Game.activeAbility === 'ghost') {
+                    if(Game.feverActive) { Game.createExplosion(e.x, e.y, '#fff'); Game.enemies.splice(i,1); Game.score += 200; Game.spawnDrop(e.x, e.y, 50); AudioSys.hit(); }
+                } else if (!State.upgrades.godMode) {
+                    Game.enemies.splice(i,1); Game.takeDamage(); Game.createExplosion(e.x, e.y, '#f00');
+                }
+                continue;
+            }
+            if(e.y > Game.height) {
+                if(e.type === 'word' && e.isTarget) { Game.takeDamage(); AudioSys.hit(); }
+                Game.enemies.splice(i,1);
+            }
+        }
+
+        for(let i=Game.drops.length-1; i>=0; i--) {
+            let d = Game.drops[i]; d.y += d.vy; d.x += d.vx; d.vy += 0.05;
+            const dx = p.x - d.x; const dy = p.y - d.y; const dist = Math.sqrt(dx*dx + dy*dy);
+            let pickupRange = State.upgrades.magnet ? 250 : 120; if(Game.feverActive) pickupRange = 500;
+            if(dist < pickupRange) { d.x += dx*0.15; d.y += dy*0.15; }
+            if(dist < 30) {
+                if(d.type === 'coin') {
+                    State.credits += d.val; State.totalXp += d.val; Game.score += d.val;
+                    AudioSys.coin(); UI.updateCash();
+                    Game.particles.push({x:d.x, y:d.y, vx:0, vy:-1, life:30, color:'#ffd700', type:'text', text:`+${d.val}`});
+                } else { Game.activateAbility(d.type); }
+                Game.drops.splice(i,1);
+            } else if(d.y > Game.height) Game.drops.splice(i,1);
+        }
+
+        for(let i=Game.particles.length-1; i>=0; i--) { let pt = Game.particles[i]; pt.x += pt.vx; pt.y += pt.vy; pt.life--; if(pt.life <= 0) Game.particles.splice(i,1); }
+    },
+
+    fire: () => {
+        const x = Game.player.x; const y = Game.player.y - 20;
+        if(Game.feverActive) {
+            Game.bullets.push({x:x, y:y, vx:0, speed:20, color:'#fff'}); Game.bullets.push({x:x, y:y, vx:-2, speed:20, color:'#fff'}); Game.bullets.push({x:x, y:y, vx:2, speed:20, color:'#fff'});
+            AudioSys.shoot(); Game.player.cd = 5; return;
+        }
+        let cd = 15;
+        if(State.currentWeapon === 'spread') {
+            Game.bullets.push({x:x, y:y, vx:0, speed:12, color:'#ff0'}); Game.bullets.push({x:x, y:y, vx:-1.5, speed:11, color:'#ff0'}); Game.bullets.push({x:x, y:y, vx:1.5, speed:11, color:'#ff0'});
+            AudioSys.shotgun(); cd = 25;
+        } else if(State.currentWeapon === 'rapid') {
+            Game.bullets.push({x:x-12, y:y, vx:0, speed:15, color:'#0ff'}); Game.bullets.push({x:x+12, y:y, vx:0, speed:15, color:'#0ff'});
+            AudioSys.shoot(); cd = 8;
+        } else if(State.currentWeapon === 'plasma') {
+             Game.bullets.push({x:x, y:y, vx:0, speed:18, color:'#f0f'}); AudioSys.shoot(); cd = 20;
+        } else {
+            Game.bullets.push({x:x, y:y, vx:0, speed:12, color:'#0ff'}); AudioSys.shoot(); cd = 15;
+        }
+        if(Game.activeAbility === 'time') cd = Math.floor(cd * 0.7);
+        Game.player.cd = cd;
+    },
+
+    hitEnemy: (idx) => {
+        const e = Game.enemies[idx];
+        if(e.type === 'alien') {
+            AudioSys.hit(); Game.createExplosion(e.x, e.y, '#f0f');
+            Game.enemies.splice(idx,1); Game.score += 50; Game.spawnDrop(e.x, e.y, 10);
+        } else {
+            e.hp--;
+            if(e.hp <= 0) {
+                if(e.isTarget) {
+                    // CORRECT HIT
+                    AudioSys.hit(); Game.createExplosion(e.x, e.y, '#0f0');
+                    Game.enemies.splice(idx,1); Game.score += 100; Game.spawnDrop(e.x, e.y, 25);
+                    
+                    if(State.codex[e.text]) { State.codex[e.text].correct++; }
+                    
+                    // --- PET FEEDING (NEW!) ---
+                    PetSystem.feed(e.text);
+                    
+                    Game.pickTarget(); document.getElementById('score-val').textContent = Game.score;
+                    if(!Game.feverActive) {
+                        Game.fever++; UI.updateFever();
+                        if(Game.fever >= 10) { Game.feverActive = true; Game.feverTimer = 300; AudioSys.feverStart(); }
+                    }
+                } else {
+                    // WRONG HIT
+                    Game.createExplosion(e.x, e.y, '#f00'); Game.enemies.splice(idx,1); Game.takeDamage();
+                    const real = Game.waveData.find(d => d.words.includes(e.text))?.definition || "?";
+                    Game.mistakes.push({word:e.text, def:real});
+                }
+            } else { 
+                // ELITE HIT (Not dead yet)
+                AudioSys.hit(); Game.createExplosion(e.x, e.y, '#ffd700'); 
+            }
+        }
+    },
+
+    spawnDrop: (x, y, val) => {
+        if(State.upgrades.scavenger) val *= 2;
+        Game.drops.push({ x:x, y:y, vx:(Math.random()-0.5)*4, vy:-3, val:val, type:'coin' });
+    },
+
+    takeDamage: () => {
+        if(Game.feverActive || State.upgrades.godMode || Game.activeAbility === 'ghost') return;
+        Game.fever = 0; UI.updateFever();
+        Game.player.hp--; AudioSys.play(100, 'sawtooth', 0.5, 0.5, 50); UI.updateShields();
+        document.body.style.transform = "translate(5px, 5px)"; setTimeout(()=>document.body.style.transform="none", 50);
+        if(Game.player.hp <= 0) {
+            Game.active = false; document.getElementById('end-score').textContent = Game.score;
+            document.getElementById('ui-layer').classList.add('hidden');
+            document.getElementById('game-over').classList.remove('hidden');
+            Game.saveData();
+        }
+    },
+
+    createExplosion: (x, y, c) => { for(let i=0; i<20; i++) Game.particles.push({x:x, y:y, vx:(Math.random()-0.5)*10, vy:(Math.random()-0.5)*10, life:20+Math.random()*15, color:c, type:'spark'}); },
+
+draw: () => {
+        const ctx = Game.ctx; 
+        ctx.fillStyle = '#050510'; 
+        ctx.fillRect(0, 0, Game.width, Game.height);
+        
+        // --- 1. STARS ---
+        ctx.fillStyle = '#fff';
+        Game.stars.forEach(s => {
+            let spd = Game.active ? (Game.feverActive||Game.inWarp?20:4) : 10; 
+            s.y += spd * s.z; if(s.y > Game.height) { s.y = 0; s.x = Math.random()*Game.width; }
+            ctx.globalAlpha = s.opacity * 0.7; ctx.fillRect(s.x, s.y, s.size, s.size);
+        });
+        
+        // --- 2. GRID ---
+        if(!Game.inWarp) {
+            ctx.strokeStyle = Game.feverActive ? 'rgba(255,255,255,0.3)' : 'rgba(255, 0, 255, 0.2)'; 
+            ctx.lineWidth = 1; ctx.beginPath();
+            for(let i=0; i<=Game.width; i+=100) { ctx.moveTo(i, Game.height); ctx.lineTo(Game.width/2 + (i-Game.width/2)*0.1, Game.height*0.3); }
+            for(let i=0; i<10; i++) { let y = (Game.height*0.35) + ((i * 70 + Game.bgOffset) % (Game.height * 0.65)); ctx.moveTo(0, y); ctx.lineTo(Game.width, y); }
+            ctx.stroke();
+        }
+        ctx.globalAlpha = 1; 
+        if(!Game.active) return;
+
+        // --- 3. PLAYER ---
+        Game.player.trails.forEach(t => {
+            ctx.fillStyle = Game.feverActive ? `rgba(255,255,255,${t.life/10})` : `rgba(0, 243, 255, ${t.life/10})`;
+            ctx.beginPath(); ctx.arc(t.x, t.y, Game.feverActive?8:4, 0, Math.PI*2); ctx.fill();
+        });
+        
+        ctx.save(); 
+        ctx.translate(Game.player.x, Game.player.y);
+        if(Game.feverActive) {
+            ctx.shadowBlur = 30; ctx.shadowColor = '#fff'; ctx.fillStyle = '#fff'; 
+            ctx.beginPath(); ctx.arc(0, 0, 25, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = `rgba(255,0,255,${Math.random()})`; 
+            ctx.beginPath(); ctx.arc(0, 0, 30 + Math.random()*10, 0, Math.PI*2); ctx.stroke();
+        } else {
+            ctx.rotate(Game.player.vx * 0.05); ctx.shadowBlur = 15; 
+            ctx.shadowColor = Game.activeAbility === 'ghost' ? '#a0a' : '#00f3ff';
+            ctx.fillStyle = '#000'; ctx.strokeStyle = Game.activeAbility === 'ghost' ? '#a0a' : '#00f3ff'; 
+            ctx.lineWidth = 2;
+            if(State.totalXp >= 250000) ctx.strokeStyle = '#ffd700'; 
+            ctx.beginPath(); ctx.moveTo(0, -25); ctx.lineTo(15, 10); ctx.lineTo(15, 20); ctx.lineTo(5, 15); ctx.lineTo(0, 25); ctx.lineTo(-5, 15); ctx.lineTo(-15, 20); ctx.lineTo(-15, 10); ctx.closePath();
+            ctx.fill(); ctx.stroke();
+            if(Game.activeAbility === 'shield') { ctx.strokeStyle='#0f0'; ctx.beginPath(); ctx.arc(0,0,40,0,Math.PI*2); ctx.stroke(); }
+        }
+        ctx.restore(); 
+        ctx.shadowBlur = 0;
+
+        // --- 4. DRAW PET & BOSS ---
+        PetSystem.draw(ctx);
+        BossSystem.draw(ctx);
+
+        // --- 5. ENEMIES ---
+        Game.enemies.forEach(e => {
+            if(e.type === 'word') {
+                ctx.save(); ctx.translate(e.x, e.y);
+                const color = e.isElite ? '#ffd700' : '#00f3ff';
+                ctx.shadowBlur = 10; ctx.shadowColor = color; ctx.strokeStyle = color; ctx.lineWidth = 2;
+                ctx.fillStyle = 'rgba(0,0,0,0.85)'; ctx.beginPath();
+                ctx.strokeRect(-e.w/2, -e.h/2, e.w, e.h); ctx.fillRect(-e.w/2, -e.h/2, e.w, e.h);
+                ctx.shadowBlur = 0; ctx.fillStyle = e.isElite ? '#ffd700' : '#fff'; 
+                ctx.font = "bold 16px 'Share Tech Mono'"; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(e.text, 0, 0); ctx.restore();
+            } else if (e.type === 'asteroid') {
+                ctx.fillStyle = '#555'; ctx.beginPath(); ctx.arc(e.x, e.y, 20, 0, Math.PI*2); ctx.fill();
+            } else {
+                ctx.save(); ctx.translate(e.x, e.y); ctx.shadowBlur = 10; ctx.shadowColor = '#ff00ff'; ctx.strokeStyle = '#ff00ff'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(0, -5, 10, Math.PI, 0); ctx.moveTo(-15, 0); ctx.lineTo(15, 0); ctx.lineTo(0, 15); ctx.lineTo(-15, 0); ctx.stroke(); ctx.restore();
+            }
+        });
+
+        // --- 6. PROJECTILES, DROPS, PARTICLES ---
+        Game.bullets.forEach(b => { ctx.shadowBlur=10; ctx.shadowColor=b.color; ctx.fillStyle=b.color; ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, Math.PI*2); ctx.fill(); });
+        Game.enemyBullets.forEach(b => { ctx.shadowBlur=10; ctx.shadowColor='#f00'; ctx.fillStyle='#f00'; ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x-3, b.y-10); ctx.lineTo(b.x+3, b.y-10); ctx.fill(); });
+
+        Game.drops.forEach(d => {
+            if(d.type === 'coin') {
+                ctx.shadowBlur = 15; ctx.shadowColor = '#ffd700'; ctx.fillStyle = '#ffd700';
+                ctx.beginPath(); ctx.moveTo(d.x, d.y-6); ctx.lineTo(d.x+6, d.y); ctx.lineTo(d.x, d.y+6); ctx.lineTo(d.x-6, d.y); ctx.fill();
+                ctx.fillStyle = '#000'; ctx.font='bold 10px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('$', d.x, d.y);
+            } else {
+                let col = d.type==='time'?'cyan':(d.type==='shield'?'lime':'purple');
+                ctx.fillStyle = col; ctx.fillRect(d.x-10, d.y-10, 20, 20); ctx.fillStyle = '#000'; ctx.font='bold 12px Arial'; ctx.fillText('?', d.x-3, d.y+4);
+            }
+        });
+        ctx.shadowBlur = 0;
+
+        Game.particles.forEach(p => {
+            if(p.type === 'text') { ctx.shadowBlur=5; ctx.shadowColor=p.color; ctx.fillStyle=p.color; ctx.font='bold 20px Orbitron'; ctx.fillText(p.text, p.x, p.y); }
+            else { ctx.globalAlpha=p.life/30; ctx.fillStyle=p.color; ctx.beginPath(); ctx.arc(p.x, p.y, Math.random()*3, 0, Math.PI*2); ctx.fill(); }
+        });
+        ctx.globalAlpha = 1; 
+        ctx.shadowBlur = 0;
+    },
+
+    bgLoop: () => { if(!Game.active) Game.draw(); requestAnimationFrame(Game.bgLoop); },
+    loop: () => { if(Game.active) { Game.update(); Game.draw(); requestAnimationFrame(Game.loop); } },
+    
+    stars: Array(80).fill().map(()=>({ x: Math.random()*window.innerWidth, y: Math.random()*window.innerHeight, z: Math.random()*2+0.5, size: Math.random()*2, opacity: Math.random() }))
+};
+
+/* --- UI MANAGE --- */
+const UI = {
+    updateShields: () => {
+        const div = document.getElementById('shield-bar'); div.innerHTML = '';
+        const max = Game.player ? Game.player.maxHp : State.upgrades.maxHp; const cur = Game.player ? Game.player.hp : max;
+        for(let i=0; i<max; i++) { const p = document.createElement('div'); p.className = i < cur ? 'shield-pip' : 'shield-pip lost'; div.appendChild(p); }
+    },
+    updateCash: () => { document.getElementById('cash-val').textContent = State.credits; document.getElementById('shop-cash').textContent = State.credits; },
+    updateFever: () => {
+        const bar = document.getElementById('fever-fill'); const pct = Game.feverActive ? 100 : (Game.fever / 10) * 100;
+        bar.style.width = pct + '%'; if(Game.feverActive) bar.parentElement.classList.add('fever-active'); else bar.parentElement.classList.remove('fever-active');
+    },
+    updateRankDisplay: () => {
+        let currentRank = Ranks[0];
+        for(let i=0; i<Ranks.length; i++) { if(State.totalXp >= Ranks[i].xp) currentRank = Ranks[i]; }
+        document.getElementById('menu-rank-display').innerHTML = `RANK: ${currentRank.name} <span style="font-size:0.7rem; margin-left:10px; color:#aaa;">(PROFILE)</span>`;
+    },
+    
+    // DIFFICULTY TOGGLE LOGIC
+    toggleDifficulty: () => {
+        const btn = document.getElementById('diff-toggle');
+        if(State.difficulty === 'advanced') {
+            State.difficulty = 'beginner';
+            btn.classList.remove('advanced');
+            btn.textContent = "MODE: BEGINNER";
+            btn.style.color = "var(--neon-green)";
+            btn.style.borderColor = "var(--neon-green)";
+            btn.style.background = "rgba(0, 255, 65, 0.1)";
+        } else {
+            State.difficulty = 'advanced';
+            btn.classList.add('advanced');
+            btn.textContent = "MODE: ADVANCED";
+            btn.style.color = "var(--neon-pink)";
+            btn.style.borderColor = "var(--neon-pink)";
+            btn.style.background = "rgba(255, 0, 255, 0.1)";
+        }
+        Game.saveData();
+    },
+
+    openShop: () => { document.getElementById('main-menu').classList.add('hidden'); document.getElementById('shop-screen').classList.remove('hidden'); UI.renderShop('ships'); },
+    closeShop: () => { document.getElementById('shop-screen').classList.add('hidden'); document.getElementById('main-menu').classList.remove('hidden'); },
+renderShop: (cat) => {
+        const grid = document.getElementById('shop-grid'); 
+        grid.innerHTML = '';
+        
+        ShopItems[cat].forEach(item => {
+            const card = document.createElement('div'); 
+            card.className = 'item-card';
+            
+            // 1. INITIALIZE VARIABLES FIRST (Fixes the ReferenceError)
+            let owned = false, equipped = false, locked = false;
+
+            // 2. NOW RUN LOGIC CHECKS
+if(cat==='pets') {
+                const type = item.id.split('_')[0]; // drone, wisp, or cube
+                const level = parseInt(item.id.split('_')[1]);
+
+                // If player already has a different type, lock this one out
+                if(State.pet.type !== 'none' && State.pet.type !== type) {
+                    locked = true;
+                } else {
+                    // Lock levels higher than current + 1
+                    if(level > State.pet.level + 1) locked = true;
+                    // Mark as owned if at or below current level
+if(cat==='pets') {
+                const type = item.id.split('_')[0]; 
+                const level = parseInt(item.id.split('_')[1]);
+
+                // 1. If player has chosen a DIFFERENT type, hide this path
+                if(State.pet.type !== 'none' && State.pet.type !== type) {
+                    locked = true;
+                } 
+                // 2. Linear progression: Must buy Level 1 before Level 2, etc.
+                else if(level > State.pet.level + 1) {
+                    locked = true;
+                }
+                // 3. Mark as owned if already purchased
+                if(State.pet.type === type && State.pet.level >= level) {
+                    owned = true;
+                }
+            }
+            }
+            else if(cat==='ships') { 
+                if(State.ownedShips.includes(item.id)) owned=true; 
+                if(State.currentShip===item.id) equipped=true; 
+            }
+            else if(cat==='weapons') { 
+                if(State.weapons.includes(item.id)) owned=true; 
+                if(State.currentWeapon===item.id) equipped=true; 
+            }
+            else if(cat==='mods') { 
+                if(item.id==='hp1' && State.upgrades.maxHp>=4) owned=true; 
+                if(item.id==='hp2' && State.upgrades.maxHp>=5) owned=true; 
+                if(item.id==='scav' && State.upgrades.scavenger) owned=true; 
+                if(item.id==='magnet' && State.upgrades.magnet) owned=true; 
+            }
+
+            // General Rank/XP Locks
+            if(item.id === 'titan' && State.totalXp < 5000) locked = true;
+            if(item.id === 'phantom' && State.totalXp < 15000) locked = true;
+            if(item.id === 'magnet' && State.totalXp < 50000) locked = true;
+            if(item.id === 'plasma' && State.totalXp < 120000) locked = true;
+            
+            // 3. DRAW BUTTONS
+            let btn = '';
+            if(locked) btn = `<button style="color:#555; border-color:#555;" disabled>LOCKED</button>`;
+            else if(equipped) btn = `<button style="color:#555; border-color:#555;" disabled>EQUIPPED</button>`;
+            else if(owned) btn = `<button style="color:#0f0; border-color:#0f0;" onclick="UI.equip('${cat}','${item.id}')">EQUIP</button>`;
+            else btn = `<button style="color:var(--neon-gold); border-color:var(--neon-gold);" onclick="UI.buy('${cat}','${item.id}',${item.cost})">BUY</button>`;
+            
+            card.innerHTML = `<div><h3>${item.name}</h3><p>${item.desc}</p></div><div><div class="price-tag">${owned?'OWNED':item.cost+' CR'}</div>${btn}</div>`;
+            grid.appendChild(card);
+        });
+    },
+buy: (cat, id, cost) => {
+        if (State.credits >= cost) {
+            State.credits -= cost;
+            AudioSys.buy();
+            
+            // Handle Ships and Weapons
+            if (cat === 'ships') State.ownedShips.push(id);
+            if (cat === 'weapons') State.weapons.push(id);
+            
+if (cat === 'pets') {
+                const type = id.split('_')[0];
+                const level = parseInt(id.split('_')[1]);
+
+                State.pet.active = true;
+                State.pet.type = type;
+                State.pet.level = level;
+
+                if (level === 1) {
+                    VoiceSys.speak(type.toUpperCase() + " CORE ACTIVATED.");
+                } else {
+                    VoiceSys.speak("EVOLUTION COMPLETE.");
+                }
+            }
+            
+            // Handle Mods (Hull Upgrades, Magnet, etc)
+            if (cat === 'mods') {
+                if (id === 'hp1' && State.upgrades.maxHp < 4) State.upgrades.maxHp = 4;
+                if (id === 'hp2' && State.upgrades.maxHp < 5) State.upgrades.maxHp = 5;
+                if (id === 'scav') State.upgrades.scavenger = true;
+                if (id === 'magnet') State.upgrades.magnet = true;
+            }
+            
+            UI.updateCash();
+            UI.renderShop(cat);
+            Game.saveData();
+        }
+    },
+        equip: (cat, id) => { if(cat==='ships') State.currentShip=id; if(cat==='weapons') State.currentWeapon=id; AudioSys.coin(); UI.renderShop(cat); Game.saveData(); },
+    showProfile: () => {
+        document.getElementById('main-menu').classList.add('hidden'); document.getElementById('profile-screen').classList.remove('hidden');
+        document.getElementById('total-xp').textContent = State.totalXp;
+        const list = document.getElementById('rank-list'); list.innerHTML = '';
+        Ranks.forEach(r => {
+            const unlocked = State.totalXp >= r.xp;
+            const div = document.createElement('div'); div.className = unlocked ? 'rank-item unlocked' : 'rank-item locked';
+            div.innerHTML = `<div><strong style="color:${unlocked?'#fff':'#888'}">${r.name}</strong><br><span style="font-size:0.8rem; color:#aaa">${r.xp} XP</span></div><div style="text-align:right; font-size:0.8rem; color:var(--neon-blue)">${r.reward}</div>`;
+            list.appendChild(div);
+        });
+    },
+    closeProfile: () => { document.getElementById('profile-screen').classList.add('hidden'); document.getElementById('main-menu').classList.remove('hidden'); },
+    showCodex: () => {
+        document.getElementById('main-menu').classList.add('hidden'); document.getElementById('codex-screen').classList.remove('hidden');
+        const grid = document.getElementById('codex-grid'); grid.innerHTML = '';
+        // Use dictionary based on current mode for display, or show all? 
+        // Showing all allows students to see what's coming. Let's show Advanced (full set).
+        const allWords = [...DictionaryAdvanced.q1, ...DictionaryAdvanced.q2, ...DictionaryAdvanced.q3, ...DictionaryAdvanced.q4, ...DictionaryAdvanced.q5].flatMap(d => d.words);
+        const uniqueWords = [...new Set(allWords)]; // Remove dupes if any
+        uniqueWords.sort().forEach(w => {
+            const data = State.codex[w];
+            if(data && data.seen) {
+                const mastered = data.correct >= 10;
+                const div = document.createElement('div'); div.className = mastered ? 'codex-item mastered' : 'codex-item';
+                div.innerHTML = `<strong style="color:${mastered?'var(--neon-gold)':'#fff'}">${w}</strong><br><span style="font-size:0.7rem; color:#aaa">${mastered ? 'MASTERED' : data.correct+'/10'}</span>`;
+                grid.appendChild(div);
+            }
+        });
+        if(grid.innerHTML === '') grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#888;">No data collected yet. Play to unlock entries!</p>';
+    },
+    closeCodex: () => { document.getElementById('codex-screen').classList.add('hidden'); document.getElementById('main-menu').classList.remove('hidden'); },
+    showInstructions: () => { document.getElementById('main-menu').classList.add('hidden'); document.getElementById('help-screen').classList.remove('hidden'); },
+    closeHelp: () => { document.getElementById('help-screen').classList.add('hidden'); document.getElementById('main-menu').classList.remove('hidden'); },
+    showReview: () => {
+        document.getElementById('game-over').classList.add('hidden'); document.getElementById('review-screen').classList.remove('hidden');
+        const list = document.getElementById('review-list'); list.innerHTML = '';
+        const u = [...new Set(Game.mistakes.map(JSON.stringify))].map(JSON.parse);
+        if(u.length===0) list.innerHTML = "<p style='color:#fff; text-align:center;'>NO ERRORS. PERFECT RUN.</p>";
+        else u.forEach(m => list.innerHTML += `<div style="border-bottom:1px solid #444; padding:10px; margin-bottom:5px;"><strong style="color:var(--neon-red); font-size:1.2rem;">${m.word}</strong><br><span style="color:#aaa; font-size:0.8rem">DEFINITION:</span> <span style="color:var(--neon-blue)">${m.def}</span></div>`);
+    }
+};
+
+/* --- UPDATED INPUT SYSTEM (FIXED FOR IPAD) --- */
+const Input = {
+    keys: { left: false, right: false, up: false, down: false, space: false },
+    touchX: null, touchY: null, touching: false,
+    init: () => {
+        window.addEventListener('keydown', e => { 
+            if(e.key==='ArrowLeft'||e.key==='a')Input.keys.left=true; 
+            if(e.key==='ArrowRight'||e.key==='d')Input.keys.right=true; 
+            if(e.key==='ArrowUp'||e.key==='w')Input.keys.up=true; 
+            if(e.key==='ArrowDown'||e.key==='s')Input.keys.down=true; 
+            if(e.key===' ')Input.keys.space=true; 
+            if(e.key==='p'||e.key==='Escape') { if(Game.active) Game.togglePause(); } 
+        });
+        window.addEventListener('keyup', e => { 
+            if(e.key==='ArrowLeft'||e.key==='a')Input.keys.left=false; 
+            if(e.key==='ArrowRight'||e.key==='d')Input.keys.right=false; 
+            if(e.key==='ArrowUp'||e.key==='w')Input.keys.up=false; 
+            if(e.key==='ArrowDown'||e.key==='s')Input.keys.down=false; 
+            if(e.key===' ')Input.keys.space=false; 
+        });
+        
+        const c = document.getElementById('gameCanvas');
+        // iPad Fix: Capture initial and moving touches without resetting abruptly
+        c.addEventListener('touchstart', e => { 
+            e.preventDefault(); 
+            Input.touching = true; 
+            Input.touchX = e.touches[0].clientX; 
+            Input.touchY = e.touches[0].clientY; 
+        }, {passive: false});
+        
+        c.addEventListener('touchmove', e => { 
+            e.preventDefault(); 
+            Input.touchX = e.touches[0].clientX; 
+            Input.touchY = e.touches[0].clientY; 
+        }, {passive: false});
+        
+        c.addEventListener('touchend', e => { 
+            e.preventDefault(); 
+            Input.touching = false;
+            // iPad Fix: We no longer set touchX/Y to null immediately. 
+            // This stops the ship from "snapping" or acting crazy when switching hands.
+        }, {passive: false});
+    }
+};
+
+/* --- SLOWED SPEED & NO-DAMAGE COLLISION UPDATE --- */
+// Apply these specific values inside your Game.spawnEntity function:
+// Word speed: Math.random() * 0.2 + 0.2
+// Alien vy: 0.8 + Math.random()
+
+// Apply this logic inside your Game.update loop:
+// if(e.type === 'alien' && Math.abs(e.x - p.x) < (e.w/2 + 20) && Math.abs(e.y - p.y) < (e.h/2 + 20)) { ... }
+
+window.onload = Game.init;
+</script>
+</body>
+</html>
