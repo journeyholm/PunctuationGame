@@ -1,1865 +1,1243 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PunctuaQuest: The Tower of Marks (3D)</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <style>
-        /* General Styling */
-        @import url('https://fonts.googleapis.com/css2?family=VT323&family=Inter:wght@400;700&display=swap');
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PunctuaQuest: The Tower of Marks</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Inter:wght@400;600;800&display=swap');
 
-        :root {
-            --primary-bg: #1a1a2e;
-            --secondary-bg: #16213e;
-            --accent-color: #0f3460;
-            --text-color: #e94560;
-            --ui-border: #e94560;
-            --success-color: #55b871;
-            --error-color: #e74c3c;
-            --font-pixel: 'VT323', monospace;
-            --font-sans: 'Inter', sans-serif;
---ui-text: #ffffff;
-    --text-accent: #00ffff; /* Cyber Cyan - higher visibility than pink for data */
-    --text-outline: 2px 2px 0px #000000; /* Hard shadow for pixel font */
-    --modal-bg: #1a1a2e;
-        }
-
-/* Replace your existing html and body CSS with this */
-/* Replace html and body with this */
-html, body {
-    /* Deep space gradient that makes 3D objects pop */
-    background: radial-gradient(circle at center, #1a1a3e 0%, #0d0d21 100%);
-    color: var(--ui-text);
-    font-family: var(--font-sans);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100dvh;
-    margin: 0;
-    overflow: hidden;
-    touch-action: none;
+:root{
+  --bg-0:#0a0a1f; --bg-1:#12122e; --panel:#171735; --panel-2:#1f1f45;
+  --ink:#f4f5ff; --ink-dim:#aeb2d6;
+  --pink:#ff3d6e; --pink-glow:rgba(255,61,110,.55);
+  --cyan:#31e6ff; --cyan-glow:rgba(49,230,255,.5);
+  --gold:#ffd23f; --green:#4be08a; --red:#ff5a5a; --purple:#a06bff;
+  --font-pixel:'VT323',monospace; --font-sans:'Inter',system-ui,sans-serif;
+  --outline:2px 2px 0 #000;
 }
-
-#game-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 100vw; /* Fill the full viewport width */
-    height: 100vh; /* Fill the full viewport height */
-    padding: 5px; /* Minimal padding for edge-to-edge feel */
-    box-sizing: border-box;
-    gap: 10px;
+*{box-sizing:border-box}
+html,body{
+  margin:0; min-height:100dvh; color:var(--ink);
+  font-family:var(--font-sans);
+  background:radial-gradient(120% 120% at 50% 0%,#1a1a3e 0%,#0a0a1f 60%,#050510 100%);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  overflow:hidden; touch-action:none;
+  -webkit-font-smoothing:antialiased;
 }
-
-#canvas-wrapper {
-    position: relative;
-    width: 100%; /* Take up all available width */
-    max-width: 1600px; /* Massive increase from 1100px */
-    height: 75vh; /* Primary focus: expanded vertical space */
-    border: 4px solid var(--ui-border);
-    border-radius: 12px;
-    background-color: #000;
-    box-shadow: 0 0 30px var(--ui-border-glow);
-    flex-shrink: 1; /* Allows shrinking on small phones without breaking layout */
+/* faint scanline / CRT grain overlay for arcade identity */
+body::after{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:2000; opacity:.16;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.0) 0px,rgba(0,0,0,.0) 2px,rgba(0,0,0,.5) 3px,rgba(0,0,0,.0) 4px);
+  mix-blend-mode:multiply;
 }
-        
-        /* Customize scrollbar for webkit browsers (Chrome, Safari) */
-        ::-webkit-scrollbar {
-            width: 0px;  /* Remove scrollbar space */
-background: radial-gradient(circle at center, #16213e 0%, #0d0d21 100%);        }
-
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-            border-radius: 8px;
-        }
-        
-        #grammarlin-sprite-modal {
-            font-size: 8rem;
-            animation: bob 3s infinite ease-in-out;
-            text-shadow: 0 0 20px #ff00ff;
-            margin-bottom: 1rem;
-        }
-
-        @keyframes bob {
-            0%, 100% { transform: translateY(0) scale(1); }
-            50% { transform: translateY(-10px) scale(1.05); }
-        }
-
-        .top-ui-buttons {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            z-index: 5;
-            display: flex;
-            gap: 10px;
-        }
-
-        .top-ui-button {
-            background-color: var(--accent-color);
-            color: var(--ui-text);
-            border: 2px solid var(--ui-border);
-            border-radius: 8px;
-            padding: 0.5rem 1rem;
-            font-family: var(--font-pixel);
-            font-size: 1.2rem;
-            cursor: pointer;
-        }
-        
-        /* D-pad Overlay Styles */
-        .d-pad-container {
-             position: absolute;
-             top: 10px;
-             left: 10px;
-             z-index: 20;
-             display: block; /* Always visible */
-        }
-        
-        .d-pad-overlay {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(4, 1fr); /* Added row for Interact button */
-            gap: 2px;
-            width: 100px; /* Smaller width */
-        }
-        
-        .d-pad-overlay button {
-            background-color: rgba(15, 52, 96, 0.5); /* More transparent */
-            border: 1px solid var(--ui-border); /* Thinner border */
-            color: white;
-            border-radius: 6px;
-            width: 32px; /* Smaller buttons */
-            height: 32px;
-            font-size: 1rem;
-            cursor: pointer;
-            touch-action: none; /* IMPORTANT: Prevents browser scroll/zoom actions */
-            padding: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            user-select: none; /* Prevent text selection */
-        }
-        
-        #up-btn-ipad    { grid-column: 2; grid-row: 1; }
-        #left-btn-ipad  { grid-column: 1; grid-row: 2; }
-        #right-btn-ipad { grid-column: 3; grid-row: 2; }
-        #down-btn-ipad  { grid-column: 2; grid-row: 3; }
-        #interact-btn-ipad { 
-            grid-column: 1 / span 3; 
-            grid-row: 4; 
-            width: 100% !important; /* Override fixed width */
-            margin-top: 4px;
-            font-size: 0.8rem !important;
-        }
-
-
-.ui-panel {
-    background-color: var(--secondary-bg);
-    border: 2px solid var(--ui-border);
-    border-radius: 10px;
-    padding: 1rem;
-    width: 100%;
-    max-width: 1600px; /* Keeps stats perfectly aligned with the game window */
-    box-sizing: border-box;
-    font-family: var(--font-pixel);
-    flex-shrink: 0;
+#game-container{
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  width:100vw; height:100dvh; padding:8px; gap:8px;
 }
-
-#game-stats-panel h2 {
-    font-size: 1.2rem; /* Smaller header to prioritize the 3D world */
-    margin: 0 0 5px 0;
-    letter-spacing: 2px;
-    color: var(--text-accent);
+#canvas-wrapper{
+  position:relative; width:100%; max-width:1500px; height:74vh;
+  border:3px solid var(--pink); border-radius:14px; background:#000;
+  box-shadow:0 0 0 2px #000, 0 0 34px var(--pink-glow), inset 0 0 60px rgba(0,0,0,.6);
+  overflow:hidden; flex-shrink:1;
 }
+canvas{display:block; width:100%; height:100%}
+::-webkit-scrollbar{width:8px}
+::-webkit-scrollbar-track{background:var(--panel)}
+::-webkit-scrollbar-thumb{background:var(--pink); border-radius:4px}
 
-        #game-stats-display {
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            gap: 1.5rem;
-            flex-wrap: wrap;
-        }
-        
-.game-stat-item {
-    font-size: 1.4rem;
-    color: #cccccc; /* Subtle gray for labels */
+/* ---- top buttons ---- */
+.top-ui-buttons{position:absolute; top:10px; right:10px; z-index:6; display:flex; gap:8px}
+.top-ui-button{
+  background:linear-gradient(#20204a,#161638); color:var(--ink);
+  border:2px solid var(--cyan); border-radius:9px; padding:.4rem .8rem;
+  font-family:var(--font-pixel); font-size:1.15rem; letter-spacing:1px; cursor:pointer;
+  box-shadow:0 0 12px var(--cyan-glow); transition:transform .12s, box-shadow .12s;
 }
+.top-ui-button:hover{transform:translateY(-2px); box-shadow:0 0 20px var(--cyan-glow)}
 
-.game-stat-item span {
-    color: var(--text-accent); 
-    font-weight: bold;
-    font-size: 1.6rem;
+/* ---- d-pad ---- */
+.d-pad-container{position:absolute; bottom:12px; left:12px; z-index:20}
+.d-pad-overlay{display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr) auto; gap:4px; width:132px}
+.d-pad-overlay button{
+  background:rgba(20,20,55,.72); border:1.5px solid var(--cyan); color:#fff; border-radius:9px;
+  width:40px; height:40px; font-size:1.1rem; cursor:pointer; touch-action:none; padding:0;
+  display:flex; align-items:center; justify-content:center; user-select:none;
+  box-shadow:0 0 8px rgba(49,230,255,.25); transition:background .1s, transform .05s;
 }
+.d-pad-overlay button:active{background:var(--cyan); color:#001018; transform:scale(.94)}
+#up-btn-ipad{grid-column:2; grid-row:1}
+#left-btn-ipad{grid-column:1; grid-row:2}
+#right-btn-ipad{grid-column:3; grid-row:2}
+#down-btn-ipad{grid-column:2; grid-row:3}
+#interact-btn-ipad{grid-column:1 / span 3; grid-row:4; width:100%!important; height:38px; margin-top:2px; font-family:var(--font-pixel); font-size:1.05rem; letter-spacing:1px}
 
-        #keys-display {
-            font-size: 2.5rem;
-            letter-spacing: 0.5rem;
-            color: var(--success-color);
-        }
-        
-        /* Modal and Dialogue styling */
-        .modal {
-            position: fixed; /* Changed from absolute to fixed to cover full screen */
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background-color: rgba(0, 0, 0, 0.85);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000; /* High z-index to sit on top of everything */
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s, visibility 0.3s;
-            padding: 1rem;
-            box-sizing: border-box;
-        }
-        
-        .modal.visible {
-            opacity: 1;
-            visibility: visible;
-        }
-/* Update this specific block in your CSS */
-/* Replace your .modal-content with this */
-.modal-content {
-    background-color: var(--secondary-bg);
-    border: 4px solid var(--ui-border);
-    border-radius: 12px;
-    padding: 2.5rem;
-    text-align: left;
-    font-family: var(--font-sans); 
-    font-size: 1.25rem;
-    line-height: 1.6;
-    color: #ffffff;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 1);
-    max-height: 85vh; /* Limits height to fit screen */
-    overflow-y: auto; /* FIX: Permanent scrollbar for long text */
-    display: flex;
-    flex-direction: column;
+/* ---- HUD ---- */
+.ui-panel{
+  background:linear-gradient(#171735,#12122c); border:2px solid var(--pink);
+  border-radius:12px; padding:.7rem 1rem; width:100%; max-width:1500px;
+  font-family:var(--font-pixel); box-shadow:0 0 18px rgba(255,61,110,.18); flex-shrink:0;
 }
+#game-stats-display{display:flex; justify-content:space-around; align-items:center; gap:1rem; flex-wrap:wrap}
+.game-stat-item{font-size:1.35rem; color:var(--ink-dim); letter-spacing:1px; display:flex; align-items:center; gap:.4rem}
+.game-stat-item .ico{font-size:1.2rem}
+.game-stat-item span{color:var(--cyan); font-weight:bold; font-size:1.55rem; text-shadow:0 0 8px var(--cyan-glow)}
+#keys-display span{color:var(--green); text-shadow:0 0 8px rgba(75,224,138,.5)}
+#quill-count span{color:var(--gold); text-shadow:0 0 8px rgba(255,210,63,.5)}
 
-/* Add this to ensure the button is always visible at the bottom of the scroll */
-#play-again-button {
-    margin-top: 2rem;
-    flex-shrink: 0;
+/* ---- modals ---- */
+.modal{
+  position:fixed; inset:0; width:100vw; height:100dvh; z-index:1600;
+  background:rgba(4,4,16,.82); backdrop-filter:blur(3px);
+  display:flex; justify-content:center; align-items:center; padding:1rem;
+  opacity:0; visibility:hidden; transition:opacity .25s, visibility .25s;
 }
-
-.modal-content h2 {
-    font-family: var(--font-pixel);
-    font-size: 3rem;
-    text-align: center;
-    color: var(--text-color);
-    text-shadow: var(--text-outline);
-    margin-top: 0;
-    text-transform: uppercase;
+.modal.visible{opacity:1; visibility:visible}
+/* finale "combat" layout: dock the Q panel to the bottom so the boss shows above it */
+.modal.combat{ background:transparent; backdrop-filter:none; align-items:flex-end; pointer-events:none; padding:0 10px 12px }
+.modal.combat .modal-content{ pointer-events:auto; max-height:46vh; width:100%; max-width:840px; margin:0 auto;
+  animation:slideup .3s ease; background:linear-gradient(160deg,rgba(26,26,62,.97),rgba(15,15,36,.97));
+  border-color:var(--pink); box-shadow:0 -8px 34px rgba(255,61,110,.4),0 0 0 2px #000 }
+@keyframes slideup{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-content{
+  background:linear-gradient(160deg,#1a1a3e,#12122a); border:3px solid var(--pink);
+  border-radius:16px; padding:2rem; text-align:left; font-family:var(--font-sans);
+  font-size:1.2rem; line-height:1.6; color:var(--ink); max-width:640px; width:100%;
+  max-height:86vh; overflow-y:auto; display:flex; flex-direction:column;
+  box-shadow:0 0 0 2px #000, 0 0 40px var(--pink-glow); animation:pop .25s ease;
 }
-
-#dialogue-text, #question-text, #info-text {
-    margin-bottom: 2rem;
-    font-weight: 500;
-    color: #f0f0f0; /* Off-white is often easier on the eyes than pure white */
+@keyframes pop{from{transform:scale(.9); opacity:0}to{transform:scale(1); opacity:1}}
+.modal-content h2{
+  font-family:var(--font-pixel); font-size:2.6rem; text-align:center; color:var(--pink);
+  text-shadow:var(--outline),0 0 18px var(--pink-glow); margin:0 0 1rem; letter-spacing:2px; text-transform:uppercase;
 }
+.modal-content h3{color:var(--cyan)}
+.modal-content ul{text-align:left; padding-left:1.1rem}
+.modal-content li{margin-bottom:.6rem}
+#dialogue-text,#question-text,#info-text{margin-bottom:1.5rem; color:#eef0ff}
+#quiz-counter{font-family:var(--font-pixel); font-size:1.3rem; color:var(--gold); text-align:right; margin-bottom:.4rem; letter-spacing:1px}
 
-#quiz-counter {
-    font-family: var(--font-pixel);
-    font-size: 1.4rem;
-    color: var(--text-color);
-    text-align: right;
-    margin-bottom: 0.5rem;
-    display: block;
+.modal-buttons{display:flex; flex-direction:column; gap:.8rem}
+.modal-buttons button, button.primary-btn{
+  background:linear-gradient(#2a2a5c,#1c1c40); color:var(--ink);
+  border:2px solid var(--cyan); border-radius:11px; padding:.85rem 1.4rem;
+  font-family:var(--font-pixel); font-size:1.35rem; letter-spacing:1px; cursor:pointer;
+  transition:transform .12s, box-shadow .12s, background .12s; width:100%;
+  box-shadow:0 4px 0 rgba(0,0,0,.35), 0 0 14px var(--cyan-glow); touch-action:manipulation;
 }
-        
-        /* Webkit Scrollbar Styling for Modal Content */
-        .modal-content::-webkit-scrollbar {
-            width: 8px;
-        }
-        .modal-content::-webkit-scrollbar-track {
-            background: var(--secondary-bg);
-        }
-        .modal-content::-webkit-scrollbar-thumb {
-            background-color: var(--ui-border);
-            border-radius: 4px;
-        }
-        
-        /* Codex Styling */
-        #codex-modal-content {
-            display: flex;
-            gap: 1rem;
-            height: 80vh;
-            font-size: 1.2rem;
-        }
-        #codex-list {
-            width: 30%;
-            border-right: 2px solid var(--ui-border);
-            padding-right: 1rem;
-            overflow-y: auto;
-            scrollbar-width: thin;
-            scrollbar-color: var(--ui-border) var(--secondary-bg);
-        }
-        #codex-list::-webkit-scrollbar { width: 8px; }
-        #codex-list::-webkit-scrollbar-track { background: var(--secondary-bg); }
-        #codex-list::-webkit-scrollbar-thumb { background-color: var(--ui-border); border-radius: 4px; }
+.modal-buttons button:hover, button.primary-btn:hover{transform:translateY(-2px); background:linear-gradient(#31316e,#22224e)}
+.modal-buttons button:active, button.primary-btn:active{transform:translateY(2px); box-shadow:0 0 0 transparent}
+button.secondary-btn{background:transparent; border:1px solid #55597f; color:var(--ink-dim); font-size:1rem; box-shadow:none; width:auto; align-self:center; padding:.5rem 1rem}
+button.secondary-btn:hover{background:transparent; color:var(--ink)}
 
-        #codex-content {
-            width: 70%;
-            text-align: left;
-            overflow-y: auto;
-            scrollbar-width: thin;
-            scrollbar-color: var(--ui-border) var(--secondary-bg);
-        }
-        #codex-content::-webkit-scrollbar { width: 8px; }
-        #codex-content::-webkit-scrollbar-track { background: var(--secondary-bg); }
-        #codex-content::-webkit-scrollbar-thumb { background-color: var(--ui-border); border-radius: 4px; }
-
-        .codex-item {
-            padding: 0.5rem;
-            margin-bottom: 0.5rem;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .codex-unlocked {
-             background-color: var(--accent-color);
-        }
-        .codex-locked {
-            color: #777;
-            cursor: not-allowed;
-        }
-        #codex-content h3 { color: var(--text-color); }
-        #codex-content p { margin-bottom: 1rem; }
-        #codex-content ul { list-style-type: none; padding-left: 0; }
-        #codex-content li { background-color: var(--primary-bg); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem; }
-
-        /* Master Puzzle Styling */
-        #master-puzzle-text {
-            line-height: 2.5;
-            font-size: 1.2rem;
-            text-align: left;
-        }
-        #puzzle-error-message {
-            color: var(--error-color);
-            min-height: 1.5em;
-        }
-        .puzzle-input {
-            width: 4ch;
-            height: 1.8rem;
-            font-family: var(--font-pixel);
-            font-size: 1.2rem;
-            text-align: center;
-            -moz-text-align-last: center;
-            text-align-last: center;
-            background-color: var(--primary-bg);
-            color: var(--ui-text);
-            border: 1px solid var(--ui-border);
-            border-radius: 4px;
-            margin: 0 4px;
-            vertical-align: middle;
-        }
-         .puzzle-input.incorrect {
-            border-color: var(--error-color);
-            border-width: 2px;
-            box-shadow: 0 0 8px var(--error-color);
-        }
-
-        .modal-content h2 {
-            color: var(--text-color);
-            margin-top: 0;
-        }
-        
-        #quiz-counter {
-            font-size: 1.2rem;
-            color: var(--text-color);
-            margin-bottom: 1rem;
-        }
-
-        .modal-content ul {
-            text-align: left;
-            list-style-position: inside;
-        }
-         .modal-content li {
-            margin-bottom: 0.5rem;
-        }
-
-        #dialogue-text, #info-text {
-            margin-bottom: 1.5rem;
-            text-align: left;
-        }
-        
-        #question-text {
-             margin-bottom: 1.5rem;
-        }
-
-        .modal-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-        
-        .modal-buttons button, button.primary-btn {
-            background-color: var(--accent-color);
-            color: var(--ui-text);
-            border: 2px solid var(--ui-border);
-            border-radius: 8px;
-            padding: 0.8rem 1.5rem;
-            font-family: var(--font-pixel);
-            font-size: 1.4rem;
-            cursor: pointer;
-            transition: background-color 0.2s, transform 0.2s;
-            width: 100%;
-            touch-action: manipulation; /* Improve touch response on mobile */
-        }
-
-        .modal-buttons button:hover, button.primary-btn:hover {
-            background-color: var(--text-color);
-            color: var(--primary-bg);
-            transform: translateY(-2px);
-        }
-        
-        button.secondary-btn {
-            background-color: transparent;
-            font-size: 1.2rem;
-            padding: 0.5rem 1rem;
-            color: var(--ui-text);
-        }
-        
-        #feedback-panel {
-            font-size: 1.6rem;
-            line-height: 1.5;
-        }
-        #feedback-panel.success { color: var(--success-color); }
-        #feedback-panel.error { color: var(--error-color); }
-
-        #win-screen {
-            font-size: 1.2rem;
-        }
-        #win-screen h2 { color: var(--success-color); font-size: 2.5rem; }
-        
-        #perfect-run-bonus {
-            color: gold;
-            text-shadow: 0 0 5px gold;
-        }
-        #perfect-run-bonus h3 {
-            font-size: 2rem;
-            margin: 0;
-        }
-
-        .final-stats {
-            display: flex;
-            justify-content: space-around;
-            margin-bottom: 2rem;
-            margin-top: 1rem;
-            font-size: 1.5rem;
-        }
-
-        #review-section {
-            text-align: left;
-            margin-top: 2rem;
-            border-top: 2px solid var(--ui-border);
-            padding-top: 1rem;
-        }
-
-        #review-section h3 {
-            color: var(--text-color);
-        }
-
-        .review-item {
-            margin-bottom: 1.5rem;
-            background-color: var(--primary-bg);
-            padding: 1rem;
-            border-radius: 5px;
-        }
-
-        .review-item p { margin: 0.5rem 0; }
-        .review-item .your-answer { color: var(--error-color); }
-        .review-item .correct-answer { color: var(--success-color); }
-
-#mobile-controls {
-    display: none !important;
+/* answer options */
+#answer-options{display:flex; flex-direction:column; gap:12px; margin-top:14px; width:100%}
+#answer-options button{
+  background:linear-gradient(#23234f,#1a1a3c); color:#fff; border:2px solid #3a3a72;
+  border-radius:11px; padding:1rem 1.1rem; font-family:var(--font-sans); font-size:1.08rem;
+  text-align:left; cursor:pointer; transition:all .14s; box-shadow:0 4px 0 rgba(0,0,0,.3);
 }
+#answer-options button:hover{border-color:var(--cyan); transform:translateY(-2px); box-shadow:0 6px 0 rgba(0,0,0,.35),0 0 14px var(--cyan-glow)}
+#answer-options button:active{transform:translateY(2px)}
+#answer-options button.correct{border-color:var(--green); background:linear-gradient(#1b4531,#123322); box-shadow:0 0 16px rgba(75,224,138,.5)}
+#answer-options button.wrong{border-color:var(--red); background:linear-gradient(#4a1d1d,#331414); box-shadow:0 0 16px rgba(255,90,90,.45)}
+.shake{animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
 
-        /* Tablet/Mobile Media Query */
-        @media (max-width: 1024px), (hover: none) and (pointer: coarse) {
-            body {
-                height: auto;
-                padding: 0.5rem;
-                display: block; /* Allow normal document flow on mobile */
-                overflow-y: auto;
-            }
-            #game-container {
-                flex-direction: column;
-                height: auto;
-                min-height: 100vh;
-                /* Ensure container grows with content */
-                margin-bottom: 50px; 
-            }
-            
-            /* Force hide bottom controls for iPad */
-            #mobile-controls {
-                display: none !important;
-            }
-        }
-        
-        /* Always show the D-pad overlay regardless of device */
-        .d-pad-container {
-            display: block;
-        }
-        
-        .d-pad {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(3, 1fr);
-            gap: 5px;
-            width: 180px;
-        }
-        
-        .d-pad button {
-            background-color: var(--accent-color);
-            border: 2px solid var(--ui-border);
-            color: white;
-            border-radius: 8px;
-        }
-        #up-btn    { grid-column: 2; grid-row: 1; }
-        #left-btn  { grid-column: 1; grid-row: 2; }
-        #right-btn { grid-column: 3; grid-row: 2; }
-        #down-btn  { grid-column: 2; grid-row: 3; }
-        
-        .action-buttons {
-            margin-top: 10px;
-        }
+#feedback-panel{font-size:1.4rem; line-height:1.5}
+#feedback-panel.success{color:var(--green)}
+#feedback-panel.error{color:var(--red)}
 
-        #dialogue-text, #question-text, #info-text {
-    margin-bottom: 2rem;
-    font-weight: 500;
-    color: #f0f0f0; /* Off-white is often gentler than pure white */
+/* win screen */
+#win-screen h2{color:var(--gold); font-size:2.5rem; text-shadow:var(--outline),0 0 20px rgba(255,210,63,.6)}
+#perfect-run-bonus{color:var(--gold); text-align:center; text-shadow:0 0 10px var(--gold); margin-bottom:1rem}
+#perfect-run-bonus h3{font-size:1.9rem; margin:.2rem 0; color:var(--gold)}
+.final-stats{display:flex; justify-content:space-around; gap:.5rem; margin:1rem 0 1.5rem; font-family:var(--font-pixel); font-size:1.4rem; flex-wrap:wrap}
+.final-stats span{color:var(--cyan)}
+#review-section{text-align:left; margin-top:1.5rem; border-top:2px solid var(--pink); padding-top:1rem}
+.review-item{margin-bottom:1rem; background:var(--bg-1); padding:.9rem; border-radius:9px; border-left:3px solid var(--gold)}
+.review-item p{margin:.4rem 0}
+
+/* codex */
+#codex-modal-content{display:flex; gap:1rem; height:78vh; max-width:820px}
+#codex-list{width:36%; border-right:2px solid var(--pink); padding-right:.8rem; overflow-y:auto}
+#codex-content{width:64%; overflow-y:auto; padding-right:.4rem}
+.codex-item{padding:.6rem .7rem; margin-bottom:.5rem; border-radius:8px; cursor:pointer; font-size:1.05rem; border:1px solid transparent; transition:all .12s}
+.codex-unlocked{background:#20204a; border-color:#33336a}
+.codex-unlocked:hover{border-color:var(--cyan); transform:translateX(3px)}
+.codex-locked{color:#5a5e82; cursor:not-allowed}
+#codex-content h3{color:var(--pink)}
+#codex-content ul{list-style:none; padding-left:0}
+#codex-content li{background:var(--bg-1); padding:.6rem .7rem; border-radius:6px; margin-bottom:.5rem; border-left:3px solid var(--cyan); font-size:1rem}
+
+/* boss HP bar */
+#boss-hud{position:absolute; top:12px; left:50%; transform:translateX(-50%); z-index:8; width:min(560px,86%); display:none}
+#boss-hud .boss-name{font-family:var(--font-pixel); font-size:1.5rem; letter-spacing:2px; color:var(--pink); text-shadow:var(--outline); text-align:center; margin-bottom:4px}
+#boss-hp-track{height:20px; background:#0c0c22; border:2px solid var(--pink); border-radius:10px; overflow:hidden; box-shadow:0 0 16px var(--pink-glow)}
+#boss-hp-fill{height:100%; width:100%; background:linear-gradient(90deg,#ff3d6e,#ff8a3d); transition:width .5s cubic-bezier(.2,.8,.2,1)}
+
+/* title / transition overlays */
+#title-screen, #transition{position:fixed; inset:0; z-index:1500; display:flex; align-items:center; justify-content:center; text-align:center}
+#title-screen{background:radial-gradient(120% 120% at 50% 20%,#1c1c48 0%,#0a0a1f 60%,#050510 100%); flex-direction:column; padding:2rem}
+#title-screen .glyph-band{font-family:var(--font-pixel); font-size:2rem; color:var(--cyan); letter-spacing:.6rem; opacity:.5; margin-bottom:1rem; text-shadow:0 0 12px var(--cyan-glow)}
+#title-screen h1{
+  font-family:var(--font-pixel); font-size:clamp(3rem,10vw,6.5rem); line-height:.9; margin:0;
+  color:var(--pink); text-shadow:var(--outline),0 0 30px var(--pink-glow); letter-spacing:3px;
 }
+#title-screen .sub{font-family:var(--font-pixel); font-size:clamp(1.2rem,4vw,2rem); color:var(--gold); letter-spacing:4px; margin:.4rem 0 2rem; text-shadow:0 0 14px rgba(255,210,63,.5)}
+#title-screen p.tag{color:var(--ink-dim); max-width:460px; margin:0 auto 2rem; line-height:1.6}
+#title-buttons{display:flex; flex-direction:column; gap:.9rem; width:min(320px,80%)}
+#title-buttons button{font-family:var(--font-pixel); font-size:1.5rem; letter-spacing:1px}
+.blink{animation:blink 1.1s steps(2,start) infinite}
+@keyframes blink{50%{opacity:.25}}
+#transition{background:#050510; opacity:0; visibility:hidden; transition:opacity .4s, visibility .4s; flex-direction:column; gap:1rem}
+#transition.on{opacity:1; visibility:visible}
+#transition .t-glyph{font-family:var(--font-pixel); font-size:5rem; color:var(--cyan); text-shadow:0 0 24px var(--cyan-glow)}
+#transition .t-label{font-family:var(--font-pixel); font-size:1.6rem; letter-spacing:3px; color:var(--ink)}
 
-/* Ensure the quiz counter is distinct from the question */
-#quiz-counter {
-    font-family: var(--font-pixel);
-    font-size: 1.4rem;
-    color: var(--text-color);
-    text-align: right;
-    margin-bottom: 0.5rem;
-    display: block;
-}
+/* toast */
+#toast{position:absolute; bottom:14px; left:50%; transform:translateX(-50%) translateY(20px); z-index:30;
+  background:linear-gradient(#20204a,#161636); border:2px solid var(--gold); color:var(--ink);
+  font-family:var(--font-pixel); font-size:1.25rem; letter-spacing:1px; padding:.6rem 1.2rem; border-radius:10px;
+  box-shadow:0 0 18px rgba(255,210,63,.4); opacity:0; transition:all .35s; pointer-events:none; text-align:center}
+#toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
 
-/* Replace your existing #answer-options and button styles with these */
-#answer-options {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-top: 20px;
-    width: 100%;
+/* mobile flow */
+@media (max-width:1024px),(hover:none) and (pointer:coarse){
+  body{height:auto; overflow-y:auto; display:block; padding:.4rem}
+  #game-container{height:auto; min-height:100dvh}
+  #canvas-wrapper{height:64vh}
+  .modal-content{font-size:1.05rem; padding:1.4rem}
+  .modal-content h2{font-size:2rem}
 }
-
-#answer-options button {
-    background-color: var(--accent-color);
-    color: #ffffff;
-    border: 2px solid var(--ui-border);
-    border-radius: 8px;
-    padding: 1.2rem;
-    font-family: var(--font-sans); /* Cleaner for reading complex ELA questions */
-    font-size: 1.1rem;
-    text-align: left;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 4px 0px rgba(0, 0, 0, 0.3);
-    text-shadow: 1px 1px 2px #000;
-}
-
-#answer-options button:hover {
-    background-color: var(--text-color);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 0px rgba(0, 0, 0, 0.4);
-}
-
-#answer-options button:active {
-    transform: translateY(2px);
-    box-shadow: 0 0px 0px transparent;
-}
-
-/* Style the Exit Quiz button to be less distracting */
-#exit-quiz-button {
-    margin-top: 15px;
-    background: transparent;
-    border: 1px solid #777;
-    color: #999;
-    font-size: 0.9rem;
-    width: auto;
-    align-self: center;
-}
-    </style>
+</style>
 </head>
 <body>
+<div id="game-container">
+  <div id="canvas-wrapper">
+    <canvas id="gameCanvas"></canvas>
 
-    <div id="game-container">
-        <div id="canvas-wrapper">
-            <canvas id="gameCanvas"></canvas>
-            <div class="top-ui-buttons">
-                <button id="codex-button" class="top-ui-button">Grammar Codex</button>
-                <button id="instructions-button" class="top-ui-button">How to Play</button>
-            </div>
+    <div class="top-ui-buttons">
+      <button id="codex-button" class="top-ui-button">Codex</button>
+      <button id="instructions-button" class="top-ui-button">How to Play</button>
+    </div>
 
-            <!-- iPad D-pad Overlay -->
-            <div class="d-pad-container">
-                <div class="d-pad-overlay">
-                    <button id="up-btn-ipad">▲</button>
-                    <button id="left-btn-ipad">◄</button>
-                    <button id="right-btn-ipad">►</button>
-                    <button id="down-btn-ipad">▼</button>
-                    <button id="interact-btn-ipad">E</button>
-                </div>
-            </div>
-            
-            <!-- All Modals -->
-            <div id="dialogue-modal" class="modal"><div class="modal-content"><p id="dialogue-text"></p><div class="modal-buttons"><button id="talk-button">Attempt Quiz</button><button id="close-dialogue-button">Leave</button></div></div></div>
-            <div id="question-modal" class="modal"><div class="modal-content"><div id="quiz-counter"></div><p id="question-text"></p><div id="answer-options" class="modal-buttons"></div><button id="exit-quiz-button" class="secondary-btn">Exit Quiz</button></div></div>
-            <div id="feedback-modal" class="modal"><div class="modal-content"><p id="feedback-panel"></p><button id="close-feedback-button" class="primary-btn">Continue</button></div></div>
-            <div id="win-modal" class="modal"><div class="modal-content" id="win-screen">
-                <h2>Victory!</h2>
-                <div id="perfect-run-bonus" style="display: none;">
-                    <h3>MASTER PUNCTUATIONIST!</h3>
-                    <p>+10,000 Perfect Run Bonus!</p>
-                </div>
-                <div class="final-stats">
-                    <div>TIME: <span id="final-time"></span></div>
-                    <div>SCORE: <span id="final-score"></span></div>
-                    <div>BEST: <span id="best-score"></span></div>
-                </div>
-                <p>You defeated Grammarlin's chaos and restored order to the world! The greatest treasure is knowledge.</p>
-                <div id="review-section">
-                    <h3>Review Your Mistakes</h3>
-                    <div id="review-content"></div>
-                </div>
-                <button id="play-again-button" class="primary-btn">Play Again</button>
-            </div></div>
-            <div id="info-modal" class="modal"><div class="modal-content"><p id="info-text"></p><button id="close-info-button" class="primary-btn">Got it!</button></div></div>
-            <div id="level-select-modal" class="modal"><div class="modal-content"><p>Where would you like to travel?</p><div class="modal-buttons"><button id="goto-ground-button">To the Ground Level</button><button id="goto-sky-button">To the Sky Tower</button><button id="goto-depths-button">To the Depths of Grammar</button><button id="stay-button">Stay Here</button></div></div></div>
-            <div id="instructions-modal" class="modal"><div class="modal-content"><h2>How to Play</h2><p>Welcome to PunctuaQuest!</p><ul><li><strong>The Story:</strong> A mischievous gremlin named Grammarlin has stolen the 12 Punctuation Marks, throwing the world into chaos! It's up to you to restore order.</li><li><strong>Goal:</strong> Pass all 12 quizzes to unlock the final door and win the game!</li><li><strong>Controls:</strong> Use <strong>Arrow Keys</strong> or <strong>W, A, S, D</strong> to move. Use the <strong>E</strong> key to interact.</li><li><strong>Collectibles:</strong> There are 9 hidden Golden Quills. Find them all for a big score bonus!</li></ul><button id="close-instructions-button" class="primary-btn">Let's Go!</button></div></div>
-            <div id="codex-modal" class="modal">
-                <div class="modal-content" id="codex-modal-content">
-                    <div id="codex-list"></div>
-                    <div id="codex-content"></div>
-                </div>
-                <button id="close-codex-button" class="primary-btn" style="position: absolute; bottom: 20px;">Close</button>
-            </div>
-            <div id="master-puzzle-modal" class="modal"><div class="modal-content">
-                <div id="grammarlin-sprite-modal">👿</div>
-                <h2>Grammarlin's Final Challenge!</h2>
-                <p>"So, you think you're clever, do you?" Grammarlin taunts. "Fix my masterpiece of chaos if you can!"</p>
-                <p id="puzzle-error-message"></p>
-                <div id="master-puzzle-text"></div>
-                <div class="modal-buttons" style="margin-top: 2rem;">
-                    <button id="submit-puzzle-button" class="primary-btn">Defeat Grammarlin!</button>
-                </div>
-            </div></div>
-        </div>
-        <div id="game-stats-panel" class="ui-panel">
-            <h2>GAME STATS</h2>
-            <div id="game-stats-display">
-                <div class="game-stat-item">TIME: <span id="timer-display">00:00</span></div>
-                <div class="game-stat-item">SCORE: <span id="score-display">0</span></div>
-                <div class="game-stat-item">KEYS: <span id="keys-display">0 / 12</span></div>
-                <div class="game-stat-item">QUILLS: <span id="quill-count">0 / 9</span></div>
-            </div>
-        </div>
-<div id="mobile-controls">
-    <div class="d-pad">
-        <button id="up-btn">▲</button>
-        <button id="left-btn">◄</button>
-        <button id="right-btn">►</button>
-        <button id="down-btn">▼</button>
+    <div id="boss-hud">
+      <div class="boss-name">GRAMMARLIN</div>
+      <div id="boss-hp-track"><div id="boss-hp-fill"></div></div>
     </div>
-    <div class="action-buttons">
-        <button id="interact-btn" class="action-btn primary-btn">Interact (E)</button>
+
+    <div class="d-pad-container">
+      <div class="d-pad-overlay">
+        <button id="up-btn-ipad" aria-label="Move up">&#9650;</button>
+        <button id="left-btn-ipad" aria-label="Move left">&#9664;</button>
+        <button id="right-btn-ipad" aria-label="Move right">&#9654;</button>
+        <button id="down-btn-ipad" aria-label="Move down">&#9660;</button>
+        <button id="interact-btn-ipad">TALK (E)</button>
+      </div>
     </div>
+
+    <div id="toast"></div>
+
+    <!-- modals -->
+    <div id="dialogue-modal" class="modal"><div class="modal-content">
+      <p id="dialogue-text"></p>
+      <div class="modal-buttons"><button id="talk-button">Attempt the Trial</button><button id="close-dialogue-button" class="secondary-btn">Leave</button></div>
+    </div></div>
+
+    <div id="question-modal" class="modal"><div class="modal-content">
+      <div id="quiz-counter"></div><p id="question-text"></p>
+      <div id="answer-options" class="modal-buttons"></div>
+      <button id="exit-quiz-button" class="secondary-btn">Exit Trial</button>
+    </div></div>
+
+    <div id="feedback-modal" class="modal"><div class="modal-content">
+      <p id="feedback-panel"></p><button id="close-feedback-button" class="primary-btn">Continue</button>
+    </div></div>
+
+    <div id="info-modal" class="modal"><div class="modal-content">
+      <p id="info-text"></p><button id="close-info-button" class="primary-btn">Got it!</button>
+    </div></div>
+
+    <div id="level-select-modal" class="modal"><div class="modal-content">
+      <h2>Tower Elevator</h2><p>Where would you like to travel?</p>
+      <div class="modal-buttons">
+        <button id="goto-ground-button">Ground Level</button>
+        <button id="goto-sky-button">The Sky Tower</button>
+        <button id="goto-depths-button">The Depths of Grammar</button>
+        <button id="stay-button" class="secondary-btn">Stay Here</button>
+      </div>
+    </div></div>
+
+    <div id="instructions-modal" class="modal"><div class="modal-content">
+      <h2>How to Play</h2>
+      <p>A mischievous gremlin named <strong>Grammarlin</strong> has scattered the 12 Punctuation Marks and thrown the world into chaos. Restore order, mark by mark.</p>
+      <ul>
+        <li><strong>Explore</strong> three realms: the Ground, the Sky Tower, and the Depths.</li>
+        <li><strong>Move</strong> with the Arrow Keys or W A S D. Press <strong>E</strong> (or the TALK button) to talk and interact.</li>
+        <li><strong>Talk</strong> to each guardian and pass their 3-question trial &mdash; all three correct in one go to win the mark.</li>
+        <li><strong>Collect</strong> 9 hidden Golden Quills for a big score bonus.</li>
+        <li><strong>Win</strong> all 12 marks, then face Grammarlin in the Chaos Showdown.</li>
+      </ul>
+      <button id="close-instructions-button" class="primary-btn">Let's Go!</button>
+    </div></div>
+
+    <div id="codex-modal" class="modal"><div class="modal-content" id="codex-modal-content">
+      <div id="codex-list"></div><div id="codex-content"></div>
+    </div>
+    <button id="close-codex-button" class="primary-btn" style="position:absolute; bottom:20px; width:auto; padding:.6rem 1.4rem">Close</button>
+    </div>
+
+    <div id="win-modal" class="modal"><div class="modal-content" id="win-screen">
+      <h2>Victory!</h2>
+      <div id="perfect-run-bonus" style="display:none"><h3>&#9733; MASTER PUNCTUATIONIST &#9733;</h3><p>+10,000 Perfect Run Bonus!</p></div>
+      <div class="final-stats">
+        <div>TIME<br><span id="final-time"></span></div>
+        <div>SCORE<br><span id="final-score"></span></div>
+        <div>BEST<br><span id="best-score"></span></div>
+      </div>
+      <p>Grammarlin's chaos is undone and order returns to the realms. The greatest treasure was knowledge all along.</p>
+      <div id="review-section"><h3>Your Run</h3><div id="review-content"></div></div>
+      <button id="play-again-button" class="primary-btn" style="margin-top:1.5rem">Play Again</button>
+    </div></div>
+  </div>
+
+  <div id="game-stats-panel" class="ui-panel">
+    <div id="game-stats-display">
+      <div class="game-stat-item"><span class="ico">&#9200;</span>TIME <span id="timer-display">00:00</span></div>
+      <div class="game-stat-item"><span class="ico">&#9733;</span>SCORE <span id="score-display">0</span></div>
+      <div class="game-stat-item"><span class="ico">&#128273;</span>MARKS <span id="keys-display">0 / 12</span></div>
+      <div class="game-stat-item"><span class="ico">&#129718;</span>QUILLS <span id="quill-count">0 / 9</span></div>
+    </div>
+  </div>
 </div>
-    </div>
+
+<!-- transition overlay -->
+<div id="transition"><div class="t-glyph">&#10022;</div><div class="t-label"></div></div>
+
+<!-- title screen -->
+<div id="title-screen">
+  <div class="glyph-band">. , ? ! &rsquo; &ldquo; ; : ( ) &ndash; &hellip;</div>
+  <h1>PunctuaQuest</h1>
+  <div class="sub">THE TOWER OF MARKS</div>
+  <p class="tag">Grammarlin stole the 12 punctuation marks. Explore three realms, pass the guardians' trials, and win them back &mdash; one mark at a time.</p>
+  <div id="title-buttons">
+    <button id="continue-button" class="primary-btn" style="display:none">Continue</button>
+    <button id="newgame-button" class="primary-btn">New Game</button>
+    <button id="title-howto" class="top-ui-button" style="font-size:1.2rem">How to Play</button>
+  </div>
+  <div style="margin-top:1.6rem; color:var(--ink-dim); font-family:var(--font-pixel); font-size:1.1rem" class="blink">PRESS START</div>
+</div>
 
 <script>
-// ===== CONFIGURATION =====
+// ===================== CONFIG =====================
 const TILE_SIZE = 10;
 const TOTAL_QUILLS = 9;
+const SAVE_KEY = 'punctuaQuestSave_v2';
+const BEST_KEY = 'punctuaQuestBest';
 
-const TILE_TYPES = {
-    GROUND: 0, WATER: 1, TREE: 2, TOWER: 3, BRIDGE: 4, DOOR: 5,
-    WALL: 6, CLOUD: 7, CHASM: 8, CRYSTAL: 9, GOLDEN_QUILL: 10, BOSS_FLOOR: 11
+const T = { GROUND:0, WATER:1, TREE:2, TOWER:3, BRIDGE:4, DOOR:5, WALL:6, CLOUD:7, CHASM:8, CRYSTAL:9, QUILL:10, BOSS_FLOOR:11 };
+
+const MAT = {
+  [T.GROUND]:  new THREE.MeshStandardMaterial({ color:'#2f5138', roughness:.95 }),
+  [T.WATER]:   new THREE.MeshStandardMaterial({ color:'#2a86c9', emissive:'#0d3a5c', emissiveIntensity:.35, roughness:.25, metalness:.1, transparent:true, opacity:.92 }),
+  [T.TOWER]:   new THREE.MeshStandardMaterial({ color:'#e7ecf2', roughness:.7 }),
+  [T.BRIDGE]:  new THREE.MeshStandardMaterial({ color:'#a9642e', roughness:.9 }),
+  [T.DOOR]:    new THREE.MeshStandardMaterial({ color:'#f5c518', emissive:'#7a5c00', emissiveIntensity:.5, metalness:.6, roughness:.35 }),
+  [T.WALL]:    new THREE.MeshStandardMaterial({ color:'#6d7683', roughness:.95 }),
+  [T.CLOUD]:   new THREE.MeshStandardMaterial({ color:'#eef3ff', emissive:'#8fb0ff', emissiveIntensity:.28, roughness:.6, transparent:true, opacity:.95 }),
+  [T.CRYSTAL]: new THREE.MeshStandardMaterial({ color:'#b06bff', emissive:'#5a1f9c', emissiveIntensity:.6, roughness:.15, metalness:.2 }),
+  [T.BOSS_FLOOR]: new THREE.MeshStandardMaterial({ color:'#3a0f45', emissive:'#20062a', emissiveIntensity:.5, roughness:.4 }),
+  TREE_TRUNK:  new THREE.MeshStandardMaterial({ color:'#7a4a24', roughness:.9 }),
+  TREE_LEAVES: new THREE.MeshStandardMaterial({ color:'#31693a', roughness:.85 }),
+  QUILL:       new THREE.MeshStandardMaterial({ color:'#ffd23f', emissive:'#ff9d00', emissiveIntensity:.6, metalness:.9, roughness:.15 }),
+  P_SKIN:  new THREE.MeshStandardMaterial({ color:'#f0c27b', roughness:.8 }),
+  P_SHIRT: new THREE.MeshStandardMaterial({ color:'#31e6ff', emissive:'#0b6b7a', emissiveIntensity:.25, roughness:.6 }),
+  P_PANTS: new THREE.MeshStandardMaterial({ color:'#26315a', roughness:.8 }),
 };
 
-const MATERIALS = {
-    [TILE_TYPES.CRYSTAL]: new THREE.MeshStandardMaterial({ 
-        color: '#9b59b6', 
-        emissive: '#4a235a', 
-        roughness: 0.2, 
-        transparent: true, 
-        opacity: 0.8 
-    }),
-GOLDEN_QUILL: new THREE.MeshStandardMaterial({ 
-        color: '#ffd700', emissive: '#ff9800', emissiveIntensity: 0.4, metalness: 1.0, roughness: 0.1 
-    }),
-
-[TILE_TYPES.GROUND]: new THREE.MeshStandardMaterial({ color: '#2d4a36', roughness: 0.8 }),
-    [TILE_TYPES.WATER]: new THREE.MeshPhysicalMaterial({ 
-        color: '#3498db', transmission: 0.5, thickness: 2, roughness: 0.1 
-    }),
-    TREE_TRUNK: new THREE.MeshLambertMaterial({ color: '#8B4513' }),
-    TREE_LEAVES: new THREE.MeshLambertMaterial({ color: '#2d572c' }),
-    [TILE_TYPES.TOWER]: new THREE.MeshStandardMaterial({ color: '#ecf0f1', roughness: 0.8 }),
-    [TILE_TYPES.BRIDGE]: new THREE.MeshLambertMaterial({ color: '#a0522d' }),
-    [TILE_TYPES.DOOR]: new THREE.MeshStandardMaterial({ color: '#f1c40f', metalness: 0.5, roughness: 0.4 }),
-    [TILE_TYPES.WALL]: new THREE.MeshStandardMaterial({ color: '#7f8c8d', roughness: 0.9 }),
-[TILE_TYPES.CLOUD]: new THREE.MeshStandardMaterial({ 
-        color: '#ffffff', emissive: '#aabbee', emissiveIntensity: 0.2, transparent: true, opacity: 0.9 
-    }),
-        [TILE_TYPES.CHASM]: new THREE.MeshLambertMaterial({ color: '#111111' }),
-[TILE_TYPES.CRYSTAL]: new THREE.MeshStandardMaterial({ 
-        color: '#9b59b6', emissive: '#6a1b9a', emissiveIntensity: 0.5, roughness: 0.1 
-    }),
-        [TILE_TYPES.BOSS_FLOOR]: new THREE.MeshLambertMaterial({ color: '#4d1a49' }),
-    GOLDEN_QUILL: new THREE.MeshStandardMaterial({ color: '#ffd700', emissive: '#ffc400', metalness: 0.8, roughness: 0.2 }),
-    DEV_TRIGGER: new THREE.MeshStandardMaterial({ color: 0xff00ff, emissive: 0xaa00aa, transparent: true, opacity: 0 }),
-    PLAYER_SKIN: new THREE.MeshLambertMaterial({ color: '#f0c27b' }),
-    PLAYER_SHIRT: new THREE.MeshLambertMaterial({ color: '#e74c3c' }),
-    PLAYER_PANTS: new THREE.MeshLambertMaterial({ color: '#34495e' })
-};
-
-const DATABASE = {
-    levels: {
-        ground: {
-            map: [
-                [2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
-                [2, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2],
-                [2, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 3, 0, 2, 0, 0, 0, 0, 2],
-                [2, 0, 0, 10, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2],
-                [2, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 2, 2, 2, 0, 0, 10, 0, 2, 2],
-                [2, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-                [2, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-                [2, 10, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-                [2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-            ],
-            startPos: { x: 2, y: 2 },
-            background: 0x87ceeb
-        },
-        sky: {
-             map: [
-                [8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
-                [8, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 7, 7, 8],
-                [8, 7, 3, 7, 8, 8, 8, 8, 8, 10, 8, 8, 8, 8, 8, 8, 8, 7, 7, 8],
-                [8, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 8],
-                [8, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 8],
-                [8, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 7, 7, 7, 8],
-                [8, 7, 7, 10, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 7, 7, 7, 8],
-                [8, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 7, 10, 7, 8],
-                [8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8]
-            ],
-            startPos: { x: 2, y: 2 },
-            background: 0xadd8e6
-        },
-        depths: {
-             map: [
-                [6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6],
-                [6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6],
-                [6, 0, 3, 0, 0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 0, 0, 0, 6],
-                [6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6],
-                [6, 0, 0, 0, 6, 6, 10, 6, 6, 0, 0, 6, 6, 10, 6, 6, 0, 0, 0, 6],
-                [6, 0, 0, 0, 6, 6, 6, 6, 6, 0, 0, 6, 6, 6, 6, 6, 0, 0, 0, 6],
-                [6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6],
-                [6, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 6],
-                [6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]
-            ],
-            startPos: { x: 2, y: 2 },
-            background: 0x483d8b
-        },
-        boss: {
-            map: [
-                [8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
-                [8, 11, 11, 11, 11, 11, 11, 11, 11, 8],
-                [8, 11, 11, 11, 11, 11, 11, 11, 11, 8],
-                [8, 11, 11, 11, 11, 11, 11, 11, 11, 8],
-                [8, 11, 11, 11, 11, 11, 11, 11, 11, 8],
-                [8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
-            ],
-            startPos: { x: 4, y: 4 },
-            background: 0x2c003e
-        }
+const DB = {
+  levels: {
+    ground: {
+      map:[
+        [2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2],
+        [2,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,2],
+        [2,0,0,0,0,0,0,0,1,1,0,0,3,0,2,0,0,0,0,2],
+        [2,0,0,10,0,0,0,0,1,1,0,0,0,0,2,0,0,0,0,2],
+        [2,0,0,0,0,0,0,0,1,1,0,2,2,2,0,0,10,0,2,2],
+        [2,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1],
+        [2,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1],
+        [2,10,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1],
+        [2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1],
+      ], startPos:{x:2,y:2}, background:0x8fd0ef
     },
-    npcs: {
-        lumberjack: { level: 'ground', pos: {x: 5, y: 2}, punctuation: 'period', dialogue: "Thank goodness you're here! A gremlin named Grammarlin stole the Period, and now I can't stop working everything is just one long run on sentence of chopping please help me restore order!" },
-        builder: { level: 'ground', pos: {x: 7, y: 5}, punctuation: 'comma', dialogue: "It's a mess! Grammarlin took the Comma, and now ideas are crashing into each other. Without commas to separate things, I can't build properly. If you can prove your mastery, I can build that bridge for you."},
-        guide: { level: 'ground', pos: {x: 12, y: 3}, punctuation: 'question_mark', dialogue: "A hero arrives. Grammarlin has stolen the Question Mark, and without it, no one can ask how to stop him! Your quest is vital. Prove you understand the power of questions to unlock this tower."},
-        exclaimer: { level: 'ground', pos: {x: 2, y: 6}, punctuation: 'exclamation_point', dialogue: "This is a disaster! An emergency! Grammarlin stole the Exclamation Point, and now I can't show how serious this is! Please, you have to help!"},
-        
-        apostrophe: { level: 'sky', pos: {x: 1, y: 1}, punctuation: 'apostrophe', dialogue: "Grammarlin's chaos reigns. He's trying to steal everyone's possessions and break apart our contractions. Without the Apostrophe, our language loses its connections. You must prove you can protect it."},
-        quotes: { level: 'sky', pos: {x: 18, y: 1}, punctuation: 'quotation_marks', dialogue: "I can no longer tell who is speaking. Grammarlin stole the Quotation Marks, and now voices are lost in a jumble. Show me you can capture their words, and you'll earn my trust."},
-        semicolon: { level: 'sky', pos: {x: 1, y: 7}, punctuation: 'semicolon', dialogue: "Related ideas are drifting apart, lost in the sky. Grammarlin stole the Semicolon, the very link between strong thoughts. You must reunite them."},
-        colon: { level: 'sky', pos: {x: 18, y: 7}, punctuation: 'colon', dialogue: "Behold, a problem! I can't introduce my important lists or explanations because Grammarlin stole the Colon. Show me you know what's to come, and I'll help your quest."},
-        
-        parentheses: { level: 'depths', pos: {x: 1, y: 1}, punctuation: 'parentheses', dialogue: "Shh... the world's extra thoughts and asides are vanishing. Grammarlin stole the Parentheses, leaving our language plain and without detail. Bring back that richness."},
-        hyphen: { level: 'depths', pos: {x: 18, y: 1}, punctuation: 'hyphen', dialogue: "I am small, but mighty. Grammarlin's theft has caused well-built words to fall apart. Without the Hyphen, compound ideas crumble. You must join them once more."},
-        ellipsis: { level: 'depths', pos: {x: 1, y: 7}, punctuation: 'ellipsis', dialogue: "Our thoughts keep getting cut off... our sentences trail into nothing... It's Grammarlin's doing. He stole the Ellipsis, leaving only suspense and confusion..."},
-        brackets: { level: 'depths', pos: {x: 15, y: 7}, punctuation: 'brackets', dialogue: "It's impossible to clarify anything now. Grammarlin stole the Brackets, and now we can't add our own context [to explain how bad it is]. Please, restore our ability to clarify."},
+    sky: {
+      map:[
+        [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8],
+        [8,7,7,8,8,8,8,8,8,8,8,8,8,8,8,8,8,7,7,8],
+        [8,7,3,7,8,8,8,8,8,10,8,8,8,8,8,8,8,7,7,8],
+        [8,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,8],
+        [8,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,8],
+        [8,7,7,7,8,8,8,8,8,8,8,8,8,8,8,8,7,7,7,8],
+        [8,7,7,10,8,8,8,8,8,8,8,8,8,8,8,8,7,7,7,8],
+        [8,7,7,7,8,8,8,8,8,8,8,8,8,8,8,8,7,10,7,8],
+        [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
+      ], startPos:{x:2,y:2}, background:0x0d0d21
     },
-    questions: {
-        period: [
-            { q: "Which of these is a command that should end with a period?", o: ["Please take out the trash", "Did you take out the trash", "Wow, you took out the trash"], a: 0, f: "A mild command, or imperative sentence, ends with a period." },
-            { q: "A period is used at the end of a ___ sentence.", o: ["declarative", "interrogative", "exclamatory"], a: 0, f: "A declarative sentence makes a statement and ends with a period." },
-            { q: "Indirect questions, such as 'I wonder who that is', end with a...", o: ["period", "question mark", "comma"], a: 0, f: "Indirect questions report a question and end with a period." },
-        ],
-        comma: [
-            { q: "Where should a comma be placed in: 'I like cooking my family and my pets'?", o: ["After 'cooking'", "After 'family'", "Both A and B"], a: 2, f: "Without commas, it sounds like you like to cook your family! Use commas to separate items in a list." },
-            { q: "Which sentence correctly uses a comma after an introductory element?", o: ["After the movie we went home.", "After the movie, we went home.", "After, the movie we went home."], a: 1, f: "Place a comma after an introductory phrase, like 'After the movie'." },
-            { q: "Which sentence correctly uses a comma for a direct address?", o: ["Let's eat Grandpa.", "Let's eat, Grandpa.", "Lets eat Grandpa."], a: 1, f: "Commas save lives! Use a comma to set off the name of a person you are speaking to directly." },
-        ],
-        question_mark: [
-            { q: "Which sentence requires a question mark?", o: ["I wonder who is coming to the party", "Who is coming to the party", "He asked who was coming to the party"], a: 1, f: "Direct questions, which ask something outright, end with a question mark." },
-            { q: "A sentence that asks a question is called...", o: ["interrogative", "declarative", "exclamatory"], a: 0, f: "Interrogative sentences ask a question and end with a question mark." },
-            { q: "A tag question, like 'It's a nice day, isn't it', should end with a...", o: ["period", "question mark", "comma"], a: 1, f: "Tag questions turn a statement into a question." },
-        ],
-        exclamation_point: [
-             { q: "Which sentence shows the most excitement and needs an exclamation point?", o: ["I'm so happy to see you", "I am happy to see you", "Are you happy to see me"], a: 0, f: "Exclamation points show excitement, surprise, or other strong emotions." },
-             { q: "A sentence that shows strong feeling is called...", o: ["exclamatory", "declarative", "interrogative"], a: 0, f: "Exclamatory sentences end with an exclamation point." },
-             { q: "Which of these is a command that shows urgency?", o: ["Watch out!", "Please be careful.", "Are you being careful?"], a: 0, f: "Strong commands use an exclamation point." },
-        ],
-        apostrophe: [
-            { q: "Which sentence correctly shows possession for one girl?", o: ["The girls book", "The girl's book", "The girls' book"], a: 1, f: "For a singular possessive noun, add an apostrophe and then 's'." },
-            { q: "What is the correct contraction for 'do not'?", o: ["Dont", "Do'nt", "Don't"], a: 2, f: "An apostrophe replaces the missing letter(s) in a contraction." },
-            { q: "Which sentence correctly shows possession for multiple boys?", o: ["The boys' hats", "The boy's hats", "The boys hats"], a: 0, f: "For a plural noun ending in 's', just add an apostrophe after the 's'." },
-        ],
-        quotation_marks: [
-            { q: "In the sentence 'Let's go to the park she said', where should quotation marks be placed?", o: ["Around 'Let's go'", "Around 'Let's go to the park'", "Around the entire sentence"], a: 1, f: "Quotation marks enclose the exact words someone says." },
-            { q: "Where does the period go in this sentence?", o: ["'I'm tired'. she said", "'I'm tired,' she said.", "'I'm tired' she said."], a: 1, f: "Commas and periods almost always go inside the closing quotation mark." },
-            { q: "Which title should be in quotation marks?", o: ["The book 'To Kill a Mockingbird'", "The movie 'Star Wars'", "The poem 'The Raven'"], a: 2, f: "Titles of long works like books and movies are italicized; short works use quotes." },
-        ],
-        semicolon: [
-             { q: "A semicolon is most like a...", o: ["period", "comma", "question mark"], a: 0, f: "A semicolon can replace a period to join two closely related independent clauses (complete sentences)." },
-             { q: "Which sentence correctly uses a semicolon?", o: ["I have a big test tomorrow; I can't go out tonight.", "I have a big test tomorrow; so I can't go out.", "I have a big test; and I can't go out."], a: 0, f: "Use a semicolon to connect two complete sentences without a coordinating conjunction." },
-             { q: "You can use a semicolon to separate items in a list when...", o: ["the list is very long", "the items themselves contain commas", "the list is in a question"], a: 1, f: "For example: 'I visited Boston, Massachusetts; Paris, France; and Rome, Italy.'" },
-        ],
-        colon: [
-             { q: "A colon is often used to introduce...", o: ["a list", "an opposing idea", "a question"], a: 0, f: "A colon signals that something important, like a list or explanation, is about to follow." },
-             { q: "Which sentence uses a colon correctly?", o: ["You need these items: butter, milk, and eggs.", "You need: butter, milk, and eggs.", "You need butter, milk, and eggs."], a: 0, f: "Use a colon after a complete sentence to introduce a list." },
-             { q: "A colon can be used to separate two independent clauses when...", o: ["the second clause explains or illustrates the first", "the clauses are very short", "the clauses are unrelated"], a: 0, f: "For example: 'He got what he worked for: a promotion.'" },
-        ],
-        parentheses: [
-            { q: "Parentheses are used to...", o: ["Emphasize a word", "Enclose extra, non-essential information", "Indicate a person is speaking"], a: 1, f: "Information in parentheses can often be removed without changing the sentence's basic meaning." },
-            { q: "If the information inside the parentheses is a complete sentence, where does the end punctuation go?", o: ["Inside the parentheses", "Outside the parentheses", "No punctuation is needed"], a: 0, f: "For example: 'He finally answered. (It had taken him five minutes to think.)'" },
-            { q: "If a parenthetical is at the end of a larger sentence, where does the period go?", o: ["Inside the parentheses", "Outside the parentheses", "Before the parentheses"], a: 1, f: "For example: 'I'm going to the store (the one on Main Street).'" },
-        ],
-        hyphen: [
-            { q: "Which phrase is correctly hyphenated?", o: ["A well behaved dog", "A well-behaved dog", "A well behaved-dog"], a: 1, f: "Use a hyphen to join two or more words serving as a single adjective before a noun." },
-            { q: "Which number should be hyphenated when written as a word?", o: ["One hundred", "Thirty five", "Thirty-five"], a: 2, f: "Hyphenate compound numbers from twenty-one to ninety-nine." },
-            { q: "Which sentence needs a hyphen?", o: ["She has a part time job.", "She has a part-time job.", "She has a parttime job."], a: 1, f: "'Part-time' acts as a single adjective describing the job." },
-        ],
-        ellipsis: [
-             { q: "What does an ellipsis (...) indicate?", o: ["A long pause or omitted words", "A grammatical error", "The end of a question"], a: 0, f: "Ellipses are used to show hesitation, create suspense, or to shorten a direct quote." },
-             { q: "An ellipsis consists of exactly ___ dots.", o: ["two", "three", "four"], a: 1, f: "The three dots of an ellipsis are a specific punctuation mark." },
-             { q: "In formal writing, an ellipsis is most often used to...", o: ["make the writing seem more dramatic", "shorten a quoted passage", "end every sentence"], a: 1, f: "It shows the reader that some of the original text has been left out." },
-        ],
-        brackets: [
-            { q: "Brackets [ ] are used to...", o: ["Add clarifying words into a quote", "Show that a sentence is very important", "Act as a substitute for commas"], a: 0, f: "Use brackets to insert your own words into a quote to add context or clarification." },
-            { q: "What is the Latin word often seen in brackets to indicate an error in a quote?", o: ["sic", "et al.", "ibid."], a: 0, f: "'[sic]' tells the reader that an error or unusual spelling in the quote was part of the original text." },
-            { q: "Brackets are different from parentheses because brackets are used...", o: ["by the author of the text", "by the person quoting the text", "for less important information"], a: 1, f: "Brackets show that someone other than the original author has added something to the text." },
-        ]
+    depths: {
+      map:[
+        [6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6],
+        [6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6],
+        [6,0,3,0,0,6,6,6,6,6,6,6,6,6,6,6,0,0,0,6],
+        [6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6],
+        [6,0,0,0,6,6,10,6,6,0,0,6,6,10,6,6,0,0,0,6],
+        [6,0,0,0,6,6,6,6,6,0,0,6,6,6,6,6,0,0,0,6],
+        [6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6],
+        [6,0,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,6],
+        [6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6]
+      ], startPos:{x:2,y:2}, background:0x1a0410
     },
-    // Restored the missing codex object
-    codex: {
-        period: {
-            title: "The Period (.)",
-            description: "The period is a powerful stop sign. It marks the end of a complete thought in a declarative (statement) or imperative (mild command) sentence.",
-            examples: [
-                "Declarative: The dog ran across the yard.",
-                "Imperative: Please close the door.",
-                "Abbreviation: Dr. Smith is here."
-            ]
-        },
-        comma: {
-            title: "The Comma (,)",
-            description: "The comma is used to create pauses and separate ideas in a sentence. It's one of the most versatile marks!",
-            examples: [
-                "In a list: I need milk, eggs, and bread.",
-                "After an intro phrase: After the game, we went for pizza.",
-                "To separate clauses: She is very smart, and she is also very kind."
-            ]
-        },
-        question_mark: {
-            title: "The Question Mark (?)",
-            description: "This mark signals a question. It is used at the end of an interrogative sentence, which asks something directly.",
-            examples: [
-                "Direct Question: What time is it?",
-                "Tag Question: You're coming with us, aren't you?"
-            ]
-        },
-        exclamation_point: {
-            title: "The Exclamation Point (!)",
-            description: "Use this to show strong emotion like excitement, surprise, or anger, or to give a forceful command.",
-            examples: [
-                "Excitement: We won the championship!",
-                "Strong Command: Stop right there!"
-            ]
-        },
-         apostrophe: {
-            title: "The Apostrophe (')",
-            description: "The apostrophe has two main jobs: to show that letters are missing in a contraction, and to show possession or ownership.",
-            examples: [
-                "Contraction: 'don't' (do not), 'it's' (it is)",
-                "Singular Possession: The cat's toy.",
-                "Plural Possession: The cats' toys."
-            ]
-        },
-        quotation_marks: {
-            title: 'Quotation Marks (" ")',
-            description: "These marks are used to show the exact words someone said (a direct quote). They are also used for the titles of short works like poems, songs, and short stories.",
-            examples: [
-                "Direct Quote: The teacher said, \"Please open your books.\"",
-                "Title of a Song: My favorite song is \"Bohemian Rhapsody.\""
-            ]
-        },
-        semicolon: {
-            title: "The Semicolon (;)",
-            description: "The semicolon is like a super-comma. Its main job is to connect two closely related independent clauses (complete sentences) that are not joined by a conjunction like 'and' or 'but'.",
-            examples: [
-                "Connecting Clauses: The sun was setting; the sky turned brilliant orange.",
-                "Complex Lists: We visited Boston, MA; Paris, France; and Rome, Italy."
-            ]
-        },
-        colon: {
-            title: "The Colon (:)",
-            description: "A colon is an introduction. It signals that something important is about to follow, such as a list, a long quotation, or an explanation.",
-            examples: [
-                "Introducing a List: You will need three things: a pencil, paper, and an eraser.",
-                "Explanation: He had one goal in life: to become a great writer."
-            ]
-        },
-        parentheses: {
-            title: "Parentheses ( )",
-            description: "Parentheses are used to enclose extra information that is not essential to the main point of the sentence. It's like a little aside to the reader.",
-            examples: [
-                "Extra Info: The winner of the race (a senior from a nearby high school) was awarded a medal."
-            ]
-        },
-        hyphen: {
-            title: "The Hyphen (-)",
-            description: "The hyphen is a joiner. It's used to connect words together to form compound words or adjectives.",
-            examples: [
-                "Compound Adjective: She is a well-behaved student.",
-                "Compound Numbers: twenty-one, fifty-six"
-            ]
-        },
-        ellipsis: {
-            title: "The Ellipsis (...)",
-            description: "An ellipsis (three dots) shows that words have been omitted from a quotation. It can also be used to show a pause, hesitation, or a thought trailing off.",
-            examples: [
-                "Omitted Words: \"Four score and seven years ago our fathers brought forth... a new nation...\"",
-                "Trailing Thought: I wonder where she could be..."
-            ]
-        },
-        brackets: {
-            title: "Brackets [ ]",
-            description: "Brackets are used to insert your own words into a quotation, usually to add clarification or context. They show that the inserted words were not part of the original quote.",
-            examples: [
-                "Clarification: \"She [the senator] voted against the bill.\"",
-                "Indicating an Error: \"They went to there [sic] house.\""
-            ]
-        }
-    },
-    masterPuzzle: {
-        textParts: [
-            "Grammarlin's final taunt lies before you", " a scrambled mess. ", " Wow", " What a journey it", "s been", "", " he sneered", ". ", " You may have collected all the keys", ", a so called great achievement", ", but can you handle this", " a true test of a punctuation master", " I", " a master of mayhem", " doubt it", "."
-        ],
-        solution: [",", '"', "!", "'", ",", '"', '"', ",", ",", "-", "?", ",", ",", ".", '"'],
-        options: [
-            [',', ';', ':', '.', '-'],
-            ['"', "'", '(', '[', '.'],
-            ['!', '?', '.', ',', ';'],
-            ["'", '"', ',', '-', '.'],
-            [',', '.', ';', ':', '-'],
-            ['"', "'", ')', ']', '.'],
-            ['.', '?', '!', ',', ';'],
-            ['"', "'", '(', '[', '.'],
-            [',', '.', ';', ':', '-'],
-            [',', '.', ';', ':', '-'],
-            ['-', '...', ':', ';', '?'],
-            ['?', '!', '.', ',', ';'],
-            [',', '.', ';', ':', '-'],
-            [',', '.', ';', ':', '-'],
-            ['.', '?', '!', ',', ';'],
-            ['"', "'", ')', ']', '.']
-        ]
+    boss: {
+      map:[
+        [8,8,8,8,8,8,8,8,8,8],
+        [8,11,11,11,11,11,11,11,11,8],
+        [8,11,11,11,11,11,11,11,11,8],
+        [8,11,11,11,11,11,11,11,11,8],
+        [8,11,11,11,11,11,11,11,11,8],
+        [8,8,8,8,8,8,8,8,8,8],
+      ], startPos:{x:4,y:4}, background:0x14001f
     }
-};
+  },
 
+  // color + glyph theme each guardian to its mark; fixes the random-color bug
+  npcs: {
+    lumberjack:  { level:'ground', pos:{x:5,y:2},  punctuation:'period',            color:'#ff5a5a', glyph:'.',  dialogue:"Thank goodness you're here! Grammarlin stole the Period, and now I can't stop working &mdash; everything is one long run-on sentence of chopping. Please, help me find the full stop!" },
+    builder:     { level:'ground', pos:{x:7,y:5},  punctuation:'comma',             color:'#ff9d3d', glyph:',',  dialogue:"It's a mess! Grammarlin took the Comma, so ideas keep crashing into each other. Without commas to separate things, I can't build. Prove your mastery and I'll raise a bridge for you." },
+    guide:       { level:'ground', pos:{x:12,y:3}, punctuation:'question_mark',     color:'#ffd23f', glyph:'?',  dialogue:"A hero arrives! Grammarlin stole the Question Mark, and now no one can ask how to stop him. Prove you understand the power of a question and this tower will open to you." },
+    exclaimer:   { level:'ground', pos:{x:2,y:6},  punctuation:'exclamation_point', color:'#ff5fa2', glyph:'!',  dialogue:"This is a disaster! An emergency! Grammarlin stole the Exclamation Point and now I can't show how serious this is. You have to help &mdash; right now!" },
+
+    apostrophe:  { level:'sky', pos:{x:1,y:1},  punctuation:'apostrophe',      color:'#22e0b8', glyph:"'",  dialogue:"Grammarlin's chaos reigns. He is breaking apart everyone's contractions and stealing our possessions. Without the Apostrophe, language loses its connections. Show me you can protect it." },
+    quotes:      { level:'sky', pos:{x:18,y:1}, punctuation:'quotation_marks', color:'#3aa0ff', glyph:'"',  dialogue:"I can no longer tell who is speaking! Grammarlin stole the Quotation Marks and now voices are lost in a jumble. Capture their exact words and you'll earn my trust." },
+    semicolon:   { level:'sky', pos:{x:1,y:7},  punctuation:'semicolon',       color:'#a06bff', glyph:';',  dialogue:"Related ideas drift apart, lost in the sky. Grammarlin stole the Semicolon &mdash; the link between strong, complete thoughts. Reunite them and restore the connection." },
+    colon:       { level:'sky', pos:{x:18,y:7}, punctuation:'colon',           color:'#31e6ff', glyph:':',  dialogue:"Behold: a problem! I cannot introduce my lists or explanations because Grammarlin stole the Colon. Show me you know what's about to come, and I'll help your quest." },
+
+    parentheses: { level:'depths', pos:{x:1,y:1},  punctuation:'parentheses', color:'#8f7bff', glyph:'(', dialogue:"Shh &mdash; our asides and extra thoughts are vanishing. Grammarlin stole the Parentheses, leaving language plain and detail-less. Bring back the richness (please)." },
+    hyphen:      { level:'depths', pos:{x:18,y:1}, punctuation:'hyphen',      color:'#ff6fa8', glyph:'-', dialogue:"I am small but mighty. Grammarlin's theft made well-built words fall apart. Without the Hyphen, compound ideas crumble. Join them once more." },
+    ellipsis:    { level:'depths', pos:{x:1,y:7},  punctuation:'ellipsis',    color:'#b3a6ff', glyph:'…', dialogue:"Our thoughts keep getting cut off... sentences trail into nothing... It's Grammarlin's doing. He stole the Ellipsis, leaving only suspense and confusion..." },
+    brackets:    { level:'depths', pos:{x:15,y:7}, punctuation:'brackets',    color:'#5cf0c4', glyph:'[', dialogue:"It's impossible to clarify anything now. Grammarlin stole the Brackets, so we can't add our own context [to explain how bad it is]. Restore our power to clarify." },
+  },
+
+  questions: {
+    period: [
+      { q:"Which of these is a command (imperative) that should end with a period?", o:["Please take out the trash","Did you take out the trash","Wow, you took out the trash"], a:0, f:"A mild command, or imperative sentence, ends with a period." },
+      { q:"A period is used at the end of a ___ sentence.", o:["declarative","interrogative","exclamatory"], a:0, f:"A declarative sentence makes a statement and ends with a period." },
+      { q:"An indirect question, such as 'I wonder who that is,' should end with a...", o:["period","question mark","comma"], a:0, f:"Indirect questions report a question rather than asking one, so they end with a period." },
+    ],
+    comma: [
+      { q:"'I like cooking my family and my pets.' Where do commas belong?", o:["After 'cooking'","After 'family'","After both 'cooking' and 'family'"], a:2, f:"Without commas it sounds like you cook your family! Use commas to separate items in a list: cooking, my family, and my pets." },
+      { q:"Which sentence correctly uses a comma after an introductory element?", o:["After the movie we went home.","After the movie, we went home.","After, the movie we went home."], a:1, f:"Place a comma after an introductory phrase like 'After the movie.'" },
+      { q:"Which sentence uses a comma correctly for direct address?", o:["Let's eat Grandpa.","Let's eat, Grandpa.","Lets eat Grandpa."], a:1, f:"Commas save lives! Use a comma to set off the name of someone you're speaking to directly." },
+    ],
+    question_mark: [
+      { q:"Which sentence needs a question mark?", o:["I wonder who is coming to the party","Who is coming to the party","He asked who was coming to the party"], a:1, f:"A direct question asks something outright, so it ends with a question mark." },
+      { q:"A sentence that asks something directly is called...", o:["interrogative","declarative","exclamatory"], a:0, f:"Interrogative sentences ask a question and end with a question mark." },
+      { q:"A tag question, like 'It's a nice day, isn't it,' should end with a...", o:["period","question mark","comma"], a:1, f:"Tag questions turn a statement into a question, so they take a question mark." },
+    ],
+    exclamation_point: [
+      { q:"Which sentence shows strong emotion and needs an exclamation point?", o:["We won the championship","I am happy to see you","Are you happy to see me"], a:0, f:"Exclamation points show excitement, surprise, or other strong feelings." },
+      { q:"A sentence that expresses strong feeling is called...", o:["exclamatory","declarative","interrogative"], a:0, f:"Exclamatory sentences end with an exclamation point." },
+      { q:"Which is a forceful command that shows urgency?", o:["Watch out!","Please be careful.","Are you being careful?"], a:0, f:"Strong, urgent commands take an exclamation point." },
+    ],
+    apostrophe: [
+      { q:"Which correctly shows possession for one girl?", o:["The girls book","The girl's book","The girls' book"], a:1, f:"For a singular possessive noun, add an apostrophe and then 's.'" },
+      { q:"What is the correct contraction for 'do not'?", o:["Dont","Do'nt","Don't"], a:2, f:"An apostrophe replaces the missing letter(s) in a contraction." },
+      { q:"Which correctly shows possession for more than one boy?", o:["The boys' hats","The boy's hats","The boys hats"], a:0, f:"For a plural noun already ending in 's,' add just an apostrophe after the 's.'" },
+    ],
+    quotation_marks: [
+      { q:"'Let's go to the park she said.' Where do the quotation marks belong?", o:["Around 'Let's go'","Around 'Let's go to the park'","Around the whole sentence"], a:1, f:"Quotation marks enclose only the exact words someone says." },
+      { q:"Where does the punctuation go? Which is correct?", o:["\"I'm tired\". she said","\"I'm tired,\" she said.","\"I'm tired\" she said."], a:1, f:"In American style, commas and periods go inside the closing quotation mark." },
+      { q:"Which title should be placed in quotation marks?", o:["the book To Kill a Mockingbird","the movie Star Wars","the poem The Raven"], a:2, f:"Titles of short works (poems, songs, short stories) use quotation marks; long works are italicized." },
+    ],
+    semicolon: [
+      { q:"A semicolon can do the same job as a...", o:["period","comma","question mark"], a:0, f:"A semicolon can replace a period to join two closely related independent clauses (complete sentences)." },
+      { q:"Which sentence uses a semicolon correctly?", o:["I have a big test tomorrow; I can't go out tonight.","I have a big test tomorrow; so I can't go out.","I have a big test; and I can't go out."], a:0, f:"Use a semicolon to join two complete sentences that are NOT linked by a coordinating conjunction like 'and' or 'so.'" },
+      { q:"You should use semicolons to separate list items when...", o:["the list is very long","the items themselves contain commas","the list is a question"], a:1, f:"Example: I visited Boston, Massachusetts; Paris, France; and Rome, Italy." },
+    ],
+    colon: [
+      { q:"A colon is most often used to introduce...", o:["a list or explanation","an opposing idea","a question"], a:0, f:"A colon signals that something important &mdash; a list, quote, or explanation &mdash; is about to follow." },
+      { q:"Which sentence uses a colon correctly?", o:["You need these items: butter, milk, and eggs.","You need: butter, milk, and eggs.","You need butter, milk, and eggs."], a:0, f:"Use a colon after a complete sentence to introduce a list." },
+      { q:"A colon can join two independent clauses when...", o:["the second explains or illustrates the first","the clauses are very short","the clauses are unrelated"], a:0, f:"Example: He finally got what he worked for: a promotion." },
+    ],
+    parentheses: [
+      { q:"Parentheses are used to...", o:["emphasize a word","enclose extra, non-essential information","show that a person is speaking"], a:1, f:"Information inside parentheses can usually be removed without changing the sentence's basic meaning." },
+      { q:"If a full sentence stands ALONE inside parentheses, the period goes...", o:["inside the parentheses","outside the parentheses","nowhere &mdash; no period needed"], a:0, f:"Example: He finally answered. (It had taken him five minutes to think.)" },
+      { q:"If a parenthetical ends a larger sentence, the period goes...", o:["inside the parentheses","outside the parentheses","before the parentheses"], a:1, f:"Example: I'm going to the store (the one on Main Street)." },
+    ],
+    hyphen: [
+      { q:"Which phrase is correctly hyphenated?", o:["a well behaved dog","a well-behaved dog","a well behaved-dog"], a:1, f:"Hyphenate two or more words acting as a single adjective BEFORE a noun." },
+      { q:"Which number is correctly hyphenated when written as words?", o:["one hundred","thirty five","thirty-five"], a:2, f:"Hyphenate compound numbers from twenty-one through ninety-nine." },
+      { q:"Which sentence needs a hyphen?", o:["She has a part time job.","She has a part-time job.","She has a parttime job."], a:1, f:"'Part-time' works as a single adjective describing the job." },
+    ],
+    ellipsis: [
+      { q:"What does an ellipsis (...) usually indicate?", o:["a pause or omitted words","a grammatical error","the end of a question"], a:0, f:"An ellipsis shows hesitation, a trailing thought, or words left out of a quote." },
+      { q:"An ellipsis is made of exactly ___ dots.", o:["two","three","four"], a:1, f:"The three dots of an ellipsis are one specific punctuation mark." },
+      { q:"In formal writing, an ellipsis is most often used to...", o:["make writing more dramatic","show that words were left out of a quote","end every sentence"], a:1, f:"It tells the reader that part of the original text has been omitted." },
+    ],
+    brackets: [
+      { q:"Square brackets [ ] are used to...", o:["add clarifying words into a quote","show that a sentence is important","replace commas"], a:0, f:"Use brackets to insert YOUR own words into someone else's quote for context or clarity." },
+      { q:"What Latin word appears in brackets to flag an error in a quote?", o:["sic","et al.","ibid."], a:0, f:"'[sic]' tells the reader the error or odd spelling was in the original quote." },
+      { q:"Brackets differ from parentheses because brackets are added by...", o:["the original author","the person quoting the text","no one in particular"], a:1, f:"Brackets show that someone OTHER than the original author added something to the text." },
+    ]
+  },
+
+  codex: {
+    period:{ title:"The Period ( . )", description:"The period is a full stop. It marks the end of a complete thought in a declarative (statement) or imperative (mild command) sentence.", examples:["Declarative: The dog ran across the yard.","Imperative: Please close the door.","Abbreviation: Dr. Smith is here."] },
+    comma:{ title:"The Comma ( , )", description:"The comma creates pauses and separates ideas. It is one of the most versatile marks of all.", examples:["In a list: I need milk, eggs, and bread.","After an intro phrase: After the game, we went for pizza.","Joining clauses: She is smart, and she is kind."] },
+    question_mark:{ title:"The Question Mark ( ? )", description:"This mark signals a direct question. It ends an interrogative sentence.", examples:["Direct question: What time is it?","Tag question: You're coming with us, aren't you?"] },
+    exclamation_point:{ title:"The Exclamation Point ( ! )", description:"Use it to show strong emotion &mdash; excitement, surprise, anger &mdash; or a forceful command.", examples:["Excitement: We won the championship!","Strong command: Stop right there!"] },
+    apostrophe:{ title:"The Apostrophe ( ' )", description:"The apostrophe has two jobs: showing missing letters in a contraction, and showing possession.", examples:["Contraction: don't (do not), it's (it is)","Singular possession: the cat's toy","Plural possession: the cats' toys"] },
+    quotation_marks:{ title:'Quotation Marks ( " " )', description:"They show the exact words someone said (a direct quote) and mark the titles of short works like poems, songs, and short stories.", examples:['Direct quote: The teacher said, "Open your books."','Song title: My favorite song is "Bohemian Rhapsody."'] },
+    semicolon:{ title:"The Semicolon ( ; )", description:"The super-comma. It links two closely related independent clauses not joined by a conjunction, and separates complex list items.", examples:["Linking clauses: The sun set; the sky turned orange.","Complex list: We saw Boston, MA; Paris, France; and Rome, Italy."] },
+    colon:{ title:"The Colon ( : )", description:"An introduction. It signals that something important follows: a list, a quotation, or an explanation.", examples:["Introducing a list: You need three things: a pencil, paper, and an eraser.","Explanation: He had one goal: to become a great writer."] },
+    parentheses:{ title:"Parentheses ( )", description:"They enclose extra, non-essential information &mdash; a little aside to the reader.", examples:["Extra info: The winner (a senior from the next town) got a medal."] },
+    hyphen:{ title:"The Hyphen ( - )", description:"A joiner. It connects words into compound words or compound adjectives.", examples:["Compound adjective: a well-behaved student","Compound numbers: twenty-one, fifty-six"] },
+    ellipsis:{ title:"The Ellipsis ( ... )", description:"Three dots that show omitted words in a quote, or a pause, hesitation, or trailing thought.", examples:['Omitted words: "Four score and seven years ago... a new nation..."',"Trailing thought: I wonder where she could be..."] },
+    brackets:{ title:"Brackets [ ]", description:"They insert the quoter's own words into a quotation to add clarification or context.", examples:['Clarification: "She [the senator] voted against the bill."','Flagging an error: "They went to there [sic] house."'] }
+  },
+
+  // NEW FINALE: Grammarlin hurls corrupted sentences; each fix lands a hit
+  finale: [
+    { taunt:"Fix my chaos if you can!", q:"Which sentence is punctuated correctly?", o:["Lets go its almost time","Let's go; it's almost time.","Lets' go, its almost time"], a:1, f:"Contractions need apostrophes: Let's (let us), it's (it is)." },
+    { taunt:"You'll never sort this one out!", q:"Choose the correct version:", o:['She yelled "watch out"!','She yelled, "Watch out!"','She yelled "Watch out"!'], a:1, f:"Introduce the quote with a comma and keep the exclamation point inside the quotation marks." },
+    { taunt:"Too many ideas, too few pauses!", q:"Which uses the semicolon correctly?", o:["I trained hard; and I won the race.","I trained hard; I won the race.","I trained; hard I won the race."], a:1, f:"A semicolon joins two complete sentences with no conjunction between them." },
+    { taunt:"Lists? What are lists?!", q:"Which introduces the list correctly?", o:["Bring these: a tent, food, and water.","Bring these; a tent, food, and water.","Bring these, a tent food and water."], a:0, f:"Use a colon after a complete sentence to introduce a list." },
+    { taunt:"I've scrambled your address!", q:"Which is punctuated correctly?", o:["We drove to Austin Texas on Friday.","We drove to Austin, Texas, on Friday.","We drove to Austin, Texas on Friday"], a:1, f:"Set off a city and state with commas &mdash; before AND after the state." },
+    { taunt:"Question or statement? Ha!", q:"Which is correct?", o:["Do you know the answer.","Do you know the answer?","Do you know the answer!"], a:1, f:"A direct question ends with a question mark." },
+    { taunt:"My finest, most tangled trick!", q:"Choose the fully correct sentence:", o:["My brother's friends' cars are fast.","My brothers friend's cars are fast.","My brother's friends cars' are fast."], a:0, f:"Singular possessive: brother's. Plural possessive: friends'. Both apostrophes placed correctly." },
+  ]
+};
+// ===================== STATE =====================
 let gameState = {
-    player: { x: 3, y: 2, level: 'ground', dir: 'down' },
-    inventory: { wood: 0, goldenQuills: 0 },
-    completedQuizzes: [],
-    unlockedCodexEntries: [],
-    wrongAnswers: [],
-    failedQuizzes: [],
-    startTime: null,
-    quizStartTime: null,
-    score: 0,
-    activeNPC: null,
-    gameMode: 'explore',
-    elevatorUnlocked: false,
-    currentQuiz: null,
-    masterPuzzleCompleted: false
+  player:{ x:2, y:2, level:'ground', dir:'down' },
+  inventory:{ wood:0, goldenQuills:0 },
+  completedQuizzes:[], unlockedCodexEntries:[], wrongAnswers:[], failedQuizzes:[],
+  collectedQuills:[], bridgeBuilt:false, elevatorUnlocked:false,
+  startTime:null, quizStartTime:null, score:0,
+  activeNPC:null, gameMode:'title', currentQuiz:null
 };
+const freshState = JSON.parse(JSON.stringify(gameState));
 
-// ===== 3D SETUP =====
+// ===================== THREE SETUP =====================
 const canvas = document.getElementById('gameCanvas');
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, 16 / 9, 0.1, 1000);
-// alpha: true is required to see the CSS Space and Lava backgrounds
-const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
-renderer.setClearColor(0x000000, 0);let playerMesh, grammarlinMesh, levelGroup = new THREE.Group(), collectiblesGroup = new THREE.Group(), clickableGroup = new THREE.Group();
-scene.add(levelGroup, collectiblesGroup, clickableGroup);
-// ADD THIS LINE HERE:
-// Around line 664
-let stars; 
-let lavaFloor; 
+const camera = new THREE.PerspectiveCamera(60, 16/9, 0.1, 2000);
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
+renderer.setClearColor(0x000000, 0);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+let playerMesh, bossMesh, stars, lavaFloor;
 let particles = [];
+const levelGroup = new THREE.Group(), collectiblesGroup = new THREE.Group(),
+      npcGroup = new THREE.Group(), fxGroup = new THREE.Group();
+scene.add(levelGroup, collectiblesGroup, npcGroup, fxGroup);
 
-
-scene.add(levelGroup, collectiblesGroup, clickableGroup);
-
-// ===== MODULES =====
-const Models = {
-    createPlayer: () => {
-        const group = new THREE.Group();
-        const head = new THREE.Mesh(new THREE.BoxGeometry(4, 4, 4), MATERIALS.PLAYER_SKIN);
-        head.position.y = 7;
-        const body = new THREE.Mesh(new THREE.BoxGeometry(4, 6, 2), MATERIALS.PLAYER_SHIRT);
-        body.position.y = 2;
-        const legL = new THREE.Mesh(new THREE.BoxGeometry(2, 4, 2), MATERIALS.PLAYER_PANTS);
-        legL.position.set(-1, -3, 0);
-        const legR = new THREE.Mesh(new THREE.BoxGeometry(2, 4, 2), MATERIALS.PLAYER_PANTS);
-        legR.position.set(1, -3, 0);
-        group.add(head, body, legL, legR);
-        return group;
-    },
-    createNPC: (color) => {
-        const group = new THREE.Group();
-        const material = new THREE.MeshLambertMaterial({ color: color });
-        const head = new THREE.Mesh(new THREE.SphereGeometry(2.5, 16, 16), material);
-        head.position.y = 6;
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 2, 8, 8), material);
-        body.position.y = 1;
-        group.add(head, body);
-        return group;
-    },
-    createQuill: () => {
-        const quill = new THREE.Mesh(new THREE.ConeGeometry(2, 8, 8), MATERIALS.GOLDEN_QUILL);
-        quill.rotation.z = Math.PI / 1.5;
-        quill.position.y = 5;
-        return quill;
-    },
-    createDevTrigger: () => {
-        const geometry = new THREE.BoxGeometry(5, 5, 5);
-        const mesh = new THREE.Mesh(geometry, MATERIALS.DEV_TRIGGER);
-        mesh.name = 'dev-trigger';
-        mesh.position.y = 2.5;
-        return mesh;
-    }
-};
+const sun = new THREE.DirectionalLight(0xffffff, 0.95);
+sun.position.set(60, 140, 40);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024,1024);
+sun.shadow.camera.near = 10; sun.shadow.camera.far = 400;
+sun.shadow.camera.left=-160; sun.shadow.camera.right=160; sun.shadow.camera.top=160; sun.shadow.camera.bottom=-160;
+scene.add(sun, new THREE.AmbientLight(0xbcd0ff, 0.55));
+const playerLight = new THREE.PointLight(0x9fe8ff, 0.6, 120); scene.add(playerLight);
 
 let runtimeLevels;
 
-const World = {
-    init: () => {
-        runtimeLevels = JSON.parse(JSON.stringify(DATABASE.levels));
-    },
-loadLevel: (levelId, preservePlayerPosition = false) => {
-    while (levelGroup.children.length > 0) levelGroup.remove(levelGroup.children[0]);
-    while (collectiblesGroup.children.length > 0) collectiblesGroup.remove(collectiblesGroup.children[0]);
-    while (clickableGroup.children.length > 0) clickableGroup.remove(clickableGroup.children[0]);
+// ===================== HELPERS =====================
+function glyphSprite(text, color, size=64){
+  const c = document.createElement('canvas'); c.width=c.height=128;
+  const g = c.getContext('2d');
+  g.font = `bold ${size}px 'VT323', monospace`;
+  g.textAlign='center'; g.textBaseline='middle';
+  g.shadowColor=color; g.shadowBlur=22;
+  g.fillStyle=color; g.fillText(text,64,70);
+  g.fillStyle='#ffffff'; g.shadowBlur=6; g.fillText(text,64,70);
+  const tex = new THREE.CanvasTexture(c); tex.anisotropy=4;
+  const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map:tex, transparent:true, depthWrite:false }));
+  spr.scale.set(8,8,1);
+  return spr;
+}
 
-    const levelData = runtimeLevels[levelId];
-    if (!levelData) return;
-
-    // ATMOSPHERE ENGINE: Maps themes to level IDs
-    if (levelId === 'sky') {
-        // 1. SKY TOWER: Space Theme
-        document.body.style.background = "radial-gradient(circle at center, #1a1a3e 0%, #0d0d21 100%)";
-        scene.background = null; 
-        if (stars) stars.visible = true;
-        if (lavaFloor) lavaFloor.visible = false;
-    } else if (levelId === 'depths') {
-        // 2. DEPTHS OF GRAMMAR: Lava Theme (Center of Earth)
-        document.body.style.background = "radial-gradient(circle at center, #600000 0%, #100000 100%)";
-        scene.background = null; 
-        if (stars) stars.visible = false;
-        if (lavaFloor) lavaFloor.visible = true; // FIX: Reveal the 3D Molten Sea
-    } else {
-        // 3. GROUND LEVEL: Original Light Blue/Nature Theme
-        document.body.style.background = "#1a1a2e"; 
-        scene.background = new THREE.Color(levelData.background);
-        if (stars) stars.visible = false;
-        if (lavaFloor) lavaFloor.visible = false;
-    }
-
-    const map = levelData.map;
-    levelGroup.add(new THREE.GridHelper(map[0].length * TILE_SIZE, map[0].length, 0xffffff, 0xffffff));
-    
-    for (let row = 0; row < map.length; row++) {
-        for (let col = 0; col < map[row].length; col++) {
-            const tileType = map[row][col];
-            let mesh;
-            const pos = { x: col * TILE_SIZE, y: 0, z: row * TILE_SIZE };
-            
-            if (tileType === TILE_TYPES.TREE) {
-                const trunk = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, TILE_SIZE, 8), MATERIALS.TREE_TRUNK);
-                const leaves = new THREE.Mesh(new THREE.BoxGeometry(TILE_SIZE-2, TILE_SIZE-2, TILE_SIZE-2), MATERIALS.TREE_LEAVES);
-                leaves.position.y = TILE_SIZE;
-                mesh = new THREE.Group();
-                mesh.add(trunk, leaves);
-            } else if ([TILE_TYPES.TOWER, TILE_TYPES.WALL, TILE_TYPES.CRYSTAL].includes(tileType)) {
-                mesh = new THREE.Mesh(new THREE.BoxGeometry(TILE_SIZE, TILE_SIZE * 1.5, TILE_SIZE), MATERIALS[tileType]);
-                pos.y = (TILE_SIZE * 1.5) / 2;
-            } else if (tileType === TILE_TYPES.GOLDEN_QUILL) {
-                const quill = Models.createQuill();
-                quill.position.x = pos.x;
-                quill.position.z = pos.z;
-                quill.userData = { col, row };
-                collectiblesGroup.add(quill);
-            } else if (tileType !== TILE_TYPES.GROUND && tileType !== TILE_TYPES.CHASM) {
-                mesh = new THREE.Mesh(new THREE.BoxGeometry(TILE_SIZE, 1, TILE_SIZE), MATERIALS[tileType]);
-            }
-            
-            if (mesh) {
-                mesh.position.set(pos.x, pos.y, pos.z);
-                levelGroup.add(mesh);
-            }
-        }
-    }
-    
-    for(const npcId in DATABASE.npcs) {
-        const npc = DATABASE.npcs[npcId];
-        if(npc.level === levelId) {
-            const npcMesh = Models.createNPC(Math.random() * 0xffffff);
-            npcMesh.position.set(npc.pos.x * TILE_SIZE, 0, npc.pos.y * TILE_SIZE);
-            npcMesh.name = `npc-${npcId}`;
-            levelGroup.add(npcMesh);
-        }
-    }
-
-    if (levelId === 'ground') {
-        const devTrigger = Models.createDevTrigger();
-        devTrigger.position.x = 19 * TILE_SIZE;
-        devTrigger.position.z = 0 * TILE_SIZE;
-        clickableGroup.add(devTrigger);
-    }
-
-    if (!preservePlayerPosition) {
-        const startPos = levelData.startPos;
-        gameState.player.x = startPos.x;
-        gameState.player.y = startPos.y;
-        playerMesh.position.set(startPos.x * TILE_SIZE, 4, startPos.y * TILE_SIZE);
-    }
-},
-    getTile: (x, y) => {
-        const map = runtimeLevels[gameState.player.level].map;
-        if (map[y] && map[y][x] !== undefined) return map[y][x];
-        return null;
-    },
-    isNpcAt: (x, y) => {
-        for(const npcId in DATABASE.npcs) {
-            const npc = DATABASE.npcs[npcId];
-            if(npc.level === gameState.player.level && npc.pos.x === x && npc.pos.y === y) {
-                return true;
-            }
-        }
-        return false;
-    },
-    updateBridge: () => {
-        runtimeLevels['ground'].map[4][8] = TILE_TYPES.BRIDGE;
-        runtimeLevels['ground'].map[4][9] = TILE_TYPES.BRIDGE;
-        World.loadLevel('ground', true);
-    },
-    collectQuill: (x, y) => {
-        for (let i = 0; i < 15; i++) {
-        const p = new THREE.Mesh(
-            new THREE.BoxGeometry(0.5, 0.5, 0.5),
-            new THREE.MeshBasicMaterial({ color: '#ffd700', transparent: true })
-        );
-        p.position.set(x * TILE_SIZE, 5, y * TILE_SIZE);
-        p.userData.velocity = new THREE.Vector3((Math.random()-0.5), Math.random(), (Math.random()-0.5));
-        scene.add(p);
-        particles.push(p);
-    }
-const currentLevel = gameState.player.level;
-    const map = runtimeLevels[currentLevel].map;
-        const baseTile = currentLevel === 'sky' ? TILE_TYPES.CLOUD : currentLevel === 'depths' ? TILE_TYPES.GROUND : TILE_TYPES.GROUND;
-        map[y][x] = baseTile;
-        
-        const quillToRemove = collectiblesGroup.children.find(q => q.userData.col === x && q.userData.row === y);
-        if (quillToRemove) {
-            quillToRemove.visible = false;
-        }
-
-        gameState.inventory.goldenQuills++;
-        gameState.score += 500;
-        UI.showInfo("You found a Golden Quill! +500 points!");
-    }
+const Models = {
+  player(){
+    const g = new THREE.Group();
+    const head = new THREE.Mesh(new THREE.BoxGeometry(4,4,4), MAT.P_SKIN); head.position.y=8; head.name='head';
+    const body = new THREE.Mesh(new THREE.BoxGeometry(4.5,6,2.4), MAT.P_SHIRT); body.position.y=3;
+    const armL = new THREE.Mesh(new THREE.BoxGeometry(1.4,5,1.4), MAT.P_SHIRT); armL.position.set(-3,3.2,0); armL.name='armL';
+    const armR = new THREE.Mesh(new THREE.BoxGeometry(1.4,5,1.4), MAT.P_SHIRT); armR.position.set(3,3.2,0); armR.name='armR';
+    const legL = new THREE.Mesh(new THREE.BoxGeometry(1.8,5,1.8), MAT.P_PANTS); legL.position.set(-1.2,-2.5,0); legL.name='legL';
+    const legR = new THREE.Mesh(new THREE.BoxGeometry(1.8,5,1.8), MAT.P_PANTS); legR.position.set(1.2,-2.5,0); legR.name='legR';
+    g.add(head,body,armL,armR,legL,legR);
+    g.traverse(m=>{ if(m.isMesh){ m.castShadow=true; }});
+    return g;
+  },
+  npc(npc){
+    const g = new THREE.Group();
+    const mat = new THREE.MeshStandardMaterial({ color:npc.color, emissive:npc.color, emissiveIntensity:.18, roughness:.6 });
+    const robe = new THREE.Mesh(new THREE.ConeGeometry(3.2,9,10), mat); robe.position.y=2.5;
+    const head = new THREE.Mesh(new THREE.SphereGeometry(2.3,18,18), mat); head.position.y=8;
+    g.add(robe, head);
+    const glyph = glyphSprite(npc.glyph, npc.color, 90); glyph.position.y=14; glyph.name='glyph';
+    g.add(glyph);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(4.6,.35,8,32), new THREE.MeshBasicMaterial({ color:npc.color, transparent:true, opacity:.5 }));
+    ring.rotation.x=Math.PI/2; ring.position.y=.4; ring.name='ring'; g.add(ring);
+    const light = new THREE.PointLight(npc.color, .5, 40); light.position.y=8; g.add(light);
+    g.traverse(m=>{ if(m.isMesh) m.castShadow=true; });
+    g.userData.baseColor = npc.color;
+    return g;
+  },
+  quill(){
+    const q = new THREE.Group();
+    const feather = new THREE.Mesh(new THREE.ConeGeometry(1.8,7,10), MAT.QUILL); feather.rotation.z=Math.PI/1.5;
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(.5,2.5,8), MAT.QUILL); tip.position.set(-2.6,-1.5,0); tip.rotation.z=Math.PI/1.5;
+    q.add(feather,tip);
+    const light = new THREE.PointLight(0xffd23f,.8,34); q.add(light);
+    q.traverse(m=>{ if(m.isMesh) m.castShadow=true; });
+    return q;
+  },
+  boss(){
+    const g = new THREE.Group();
+    const bodyMat = new THREE.MeshStandardMaterial({ color:'#3a1c5c', emissive:'#7a1fbf', emissiveIntensity:.4, roughness:.4 });
+    const body = new THREE.Mesh(new THREE.IcosahedronGeometry(10,1), bodyMat); body.position.y=16; body.name='body';
+    const belly = new THREE.Mesh(new THREE.SphereGeometry(6,16,16), new THREE.MeshStandardMaterial({ color:'#20103a', roughness:.5 })); belly.position.set(0,13,4.5);
+    const eyeMat = new THREE.MeshStandardMaterial({ color:'#31e6ff', emissive:'#31e6ff', emissiveIntensity:1.2 });
+    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(2.1,14,14), eyeMat); eyeL.position.set(-3.4,18,8);
+    const eyeR = new THREE.Mesh(new THREE.SphereGeometry(2.1,14,14), eyeMat); eyeR.position.set(3.4,18,8);
+    const pMat = new THREE.MeshBasicMaterial({ color:'#050510' });
+    const pL = new THREE.Mesh(new THREE.SphereGeometry(.9,10,10), pMat); pL.position.set(-3.4,18,9.8);
+    const pR = new THREE.Mesh(new THREE.SphereGeometry(.9,10,10), pMat); pR.position.set(3.4,18,9.8);
+    const mouth = new THREE.Mesh(new THREE.BoxGeometry(6,1.4,1), new THREE.MeshBasicMaterial({ color:'#ff3d6e' })); mouth.position.set(0,12.5,9.4);
+    const armMat = bodyMat;
+    const armL = new THREE.Mesh(new THREE.CylinderGeometry(.9,.5,8,8), armMat); armL.position.set(-9,15,3); armL.rotation.z=.6; armL.name='armL';
+    const armR = new THREE.Mesh(new THREE.CylinderGeometry(.9,.5,8,8), armMat); armR.position.set(9,15,3); armR.rotation.z=-.6; armR.name='armR';
+    g.add(body,belly,eyeL,eyeR,pL,pR,mouth,armL,armR);
+    // jagged crown
+    for(let i=-2;i<=2;i++){ const s=new THREE.Mesh(new THREE.ConeGeometry(1.3,5,6), bodyMat); s.position.set(i*3.2,24+ (i===0?2: (Math.abs(i)===1?1:0)),0); g.add(s); }
+    g.traverse(m=>{ if(m.isMesh) m.castShadow=true; });
+    g.userData = { hitTimer:0, bodyMat, defeated:false };
+    return g;
+  }
 };
 
-const Player = {
-    init: () => {
-        playerMesh = Models.createPlayer();
-        scene.add(playerMesh);
-    },
-    move: (dx, dy) => {
-        if (gameState.gameMode !== 'explore') return;
-        const newX = gameState.player.x + dx;
-        const newY = gameState.player.y + dy;
+// ===================== WORLD =====================
+const World = {
+  init(){ runtimeLevels = JSON.parse(JSON.stringify(DB.levels)); if(gameState.bridgeBuilt){ runtimeLevels.ground.map[4][8]=T.BRIDGE; runtimeLevels.ground.map[4][9]=T.BRIDGE; } },
+  clear(grp){ while(grp.children.length) grp.remove(grp.children[0]); },
+  loadLevel(levelId, keepPos=false){
+    World.clear(levelGroup); World.clear(collectiblesGroup); World.clear(npcGroup);
+    const data = runtimeLevels[levelId]; if(!data) return;
 
-        if (dx === 1) gameState.player.dir = 'right';
-        if (dx === -1) gameState.player.dir = 'left';
-        if (dy === 1) gameState.player.dir = 'down';
-        if (dy === -1) gameState.player.dir = 'up';
-        
-        const tile = World.getTile(newX, newY);
-        const isSolid = [TILE_TYPES.TREE, TILE_TYPES.WALL, TILE_TYPES.CHASM].includes(tile);
-        const isWater = tile === TILE_TYPES.WATER;
-        const isNpc = World.isNpcAt(newX, newY);
-
-        if (tile !== null && !isSolid && !isWater && !isNpc) {
-            gameState.player.x = newX;
-            gameState.player.y = newY;
-            Player.checkTileAction();
-        }
-    },
-    interact: () => {
-        if (gameState.gameMode !== 'explore') return;
-        const { x, y, level } = gameState.player;
-        
-        const neighbors = [ {dx:0, dy:1}, {dx:0, dy:-1}, {dx:1, dy:0}, {dx:-1, dy:0} ];
-        for (const n of neighbors) {
-            const checkX = x + n.dx;
-            const checkY = y + n.dy;
-            if (World.getTile(checkX, checkY) === TILE_TYPES.DOOR) {
-                UI.checkWinCondition();
-                return; 
-            }
-        }
-
-        for (const npcId in DATABASE.npcs) {
-            const npc = DATABASE.npcs[npcId];
-            if (npc.level === level) {
-                const dist = Math.abs(npc.pos.x - x) + Math.abs(npc.pos.y - y);
-                if (dist <= 1) {
-                    NPC.startInteraction(npcId);
-                    return; 
-                }
-            }
-        }
-    },
-    checkTileAction: () => {
-        const { x, y } = gameState.player;
-        const tileType = World.getTile(x, y);
-
-        if (tileType === TILE_TYPES.TOWER && gameState.elevatorUnlocked) {
-            UI.showLevelSelect();
-        } else if (tileType === TILE_TYPES.GOLDEN_QUILL) {
-            World.collectQuill(x, y);
-        } else if (tileType === TILE_TYPES.DOOR) {
-            UI.checkWinCondition();
-        }
+    // atmosphere
+    if(levelId==='sky'||levelId==='boss'){
+      document.body.style.background = levelId==='boss'
+        ? "radial-gradient(circle at center,#3a0030 0%,#0a0010 70%)"
+        : "radial-gradient(circle at center,#1a1a3e 0%,#0a0a1f 70%)";
+      scene.background=null; if(stars) stars.visible=true; if(lavaFloor) lavaFloor.visible=false;
+    } else if(levelId==='depths'){
+      document.body.style.background = "radial-gradient(circle at center,#600018 0%,#100004 70%)";
+      scene.background=null; if(stars) stars.visible=false; if(lavaFloor) lavaFloor.visible=true;
+    } else {
+      document.body.style.background = "radial-gradient(120% 120% at 50% 0%,#8fd0ef 0%,#4a86c0 60%,#20395a 100%)";
+      scene.background = new THREE.Color(data.background); if(stars) stars.visible=false; if(lavaFloor) lavaFloor.visible=false;
     }
+
+    const map = data.map;
+    // subtle themed grid
+    const gridColor = levelId==='depths'?0xff6a3d : levelId==='sky'||levelId==='boss'?0x31e6ff : 0xffffff;
+    const grid = new THREE.GridHelper(map[0].length*TILE_SIZE, map[0].length, gridColor, gridColor);
+    grid.material.opacity = .12; grid.material.transparent = true;
+    grid.position.set((map[0].length*TILE_SIZE)/2 - TILE_SIZE/2, .05, (map.length*TILE_SIZE)/2 - TILE_SIZE/2);
+    levelGroup.add(grid);
+
+    for(let r=0;r<map.length;r++){
+      for(let c=0;c<map[r].length;c++){
+        const tt = map[r][c]; let mesh; const pos={x:c*TILE_SIZE,y:0,z:r*TILE_SIZE};
+        if(tt===T.TREE){
+          mesh=new THREE.Group();
+          const trunk=new THREE.Mesh(new THREE.CylinderGeometry(1.1,1.4,TILE_SIZE,8),MAT.TREE_TRUNK);
+          const leaves=new THREE.Mesh(new THREE.DodecahedronGeometry(6,0),MAT.TREE_LEAVES); leaves.position.y=TILE_SIZE-1;
+          mesh.add(trunk,leaves);
+        } else if(tt===T.TOWER||tt===T.WALL||tt===T.CRYSTAL){
+          const h=TILE_SIZE*1.5; mesh=new THREE.Mesh(new THREE.BoxGeometry(TILE_SIZE,h,TILE_SIZE),MAT[tt]); pos.y=h/2;
+          if(tt===T.TOWER){ const cap=new THREE.Mesh(new THREE.ConeGeometry(TILE_SIZE*0.72,7,4),MAT[T.CRYSTAL]); cap.position.y=h/2+3.5; cap.rotation.y=Math.PI/4; mesh.add(cap); }
+        } else if(tt===T.QUILL){
+          const key=`${levelId}:${c}:${r}`;
+          if(!gameState.collectedQuills.includes(key)){
+            const q=Models.quill(); q.position.set(pos.x,5,pos.z); q.userData={col:c,row:r,key}; collectiblesGroup.add(q);
+          } else { map[r][c] = (levelId==='sky'?T.CLOUD:T.GROUND); }
+        } else if(tt===T.DOOR){
+          mesh=new THREE.Mesh(new THREE.BoxGeometry(TILE_SIZE*.9,TILE_SIZE*1.4,2),MAT[T.DOOR]); pos.y=TILE_SIZE*0.7;
+        } else if(tt!==T.GROUND && tt!==T.CHASM){
+          mesh=new THREE.Mesh(new THREE.BoxGeometry(TILE_SIZE,1,TILE_SIZE),MAT[tt]);
+        }
+        if(mesh){ mesh.position.set(pos.x,pos.y,pos.z); mesh.traverse(m=>{ if(m.isMesh){ m.castShadow=true; m.receiveShadow=true; }}); levelGroup.add(mesh); }
+      }
+    }
+    // ground/floor receiver plane for shadows on walkable tiles
+    const floorMat = new THREE.MeshStandardMaterial({ color: levelId==='depths'?0x2a0a10:levelId==='sky'||levelId==='boss'?0x0c0c22:0x264a30, roughness:.95, transparent:true, opacity: (levelId==='sky'||levelId==='boss')?0.0:1 });
+    if(levelId!=='sky'&&levelId!=='boss'){
+      const fp=new THREE.Mesh(new THREE.PlaneGeometry(map[0].length*TILE_SIZE+20, map.length*TILE_SIZE+20), floorMat);
+      fp.rotation.x=-Math.PI/2; fp.position.set((map[0].length*TILE_SIZE)/2-TILE_SIZE/2,-0.5,(map.length*TILE_SIZE)/2-TILE_SIZE/2); fp.receiveShadow=true; levelGroup.add(fp);
+    }
+
+    // NPCs
+    for(const id in DB.npcs){ const n=DB.npcs[id]; if(n.level===levelId){
+      const m=Models.npc(n); m.position.set(n.pos.x*TILE_SIZE,0,n.pos.y*TILE_SIZE); m.name=`npc-${id}`;
+      if(gameState.completedQuizzes.includes(id)){ World.markNpcComplete(m); }
+      npcGroup.add(m);
+    }}
+
+    if(!keepPos){ gameState.player.x=data.startPos.x; gameState.player.y=data.startPos.y;
+      if(playerMesh) playerMesh.position.set(data.startPos.x*TILE_SIZE,4,data.startPos.y*TILE_SIZE); }
+    playerTarget.set(gameState.player.x*TILE_SIZE, 4, gameState.player.y*TILE_SIZE);
+  },
+  markNpcComplete(m){
+    const check = glyphSprite('✓', '#4be08a', 96); check.position.y=14; check.name='glyph';
+    const old = m.getObjectByName('glyph'); if(old) m.remove(old);
+    m.add(check);
+    const ring = m.getObjectByName('ring'); if(ring){ ring.material.color.set('#4be08a'); ring.material.opacity=.85; }
+    m.traverse(o=>{ if(o.isPointLight) o.color.set('#4be08a'); });
+  },
+  getTile(x,y){ const map=runtimeLevels[gameState.player.level].map; return (map[y]&&map[y][x]!==undefined)?map[y][x]:null; },
+  isNpcAt(x,y){ for(const id in DB.npcs){ const n=DB.npcs[id]; if(n.level===gameState.player.level&&n.pos.x===x&&n.pos.y===y) return true; } return false; },
+  updateBridge(){ gameState.bridgeBuilt=true; runtimeLevels.ground.map[4][8]=T.BRIDGE; runtimeLevels.ground.map[4][9]=T.BRIDGE; World.loadLevel('ground',true); },
+  collectQuill(x,y){
+    const key=`${gameState.player.level}:${x}:${y}`;
+    if(gameState.collectedQuills.includes(key)) return;
+    gameState.collectedQuills.push(key);
+    for(let i=0;i<18;i++){ const p=new THREE.Mesh(new THREE.BoxGeometry(.6,.6,.6),new THREE.MeshBasicMaterial({color:'#ffd23f',transparent:true}));
+      p.position.set(x*TILE_SIZE,6,y*TILE_SIZE); p.userData.v=new THREE.Vector3((Math.random()-.5)*1.4,Math.random()*1.6,(Math.random()-.5)*1.4); fxGroup.add(p); particles.push(p); }
+    const map=runtimeLevels[gameState.player.level].map; map[y][x]=(gameState.player.level==='sky'?T.CLOUD:T.GROUND);
+    const q=collectiblesGroup.children.find(o=>o.userData.key===key); if(q) q.visible=false;
+    gameState.inventory.goldenQuills++; gameState.score+=500;
+    UI.toast(`&#129718; Golden Quill! +500  (${gameState.inventory.goldenQuills}/${TOTAL_QUILLS})`);
+    Save.write();
+  }
+};
+// smooth movement targets
+let playerTarget = new THREE.Vector3(20,4,20);
+let camTarget = new THREE.Vector3();
+let walkPhase = 0, moving=false;
+
+const Player = {
+  init(){ playerMesh = Models.player(); playerMesh.position.copy(playerTarget); scene.add(playerMesh); },
+  move(dx,dy){
+    if(gameState.gameMode!=='explore' || document.querySelector('.modal.visible')) return;
+    const nx=gameState.player.x+dx, ny=gameState.player.y+dy;
+    if(dx===1)gameState.player.dir='right'; if(dx===-1)gameState.player.dir='left';
+    if(dy===1)gameState.player.dir='down'; if(dy===-1)gameState.player.dir='up';
+    const tile=World.getTile(nx,ny);
+    const solid=[T.TREE,T.WALL,T.CHASM,T.WATER].includes(tile);
+    if(tile!==null && !solid && !World.isNpcAt(nx,ny)){
+      gameState.player.x=nx; gameState.player.y=ny;
+      playerTarget.set(nx*TILE_SIZE,4,ny*TILE_SIZE); moving=true;
+      Player.checkTile();
+    }
+  },
+  interact(){
+    if(gameState.gameMode!=='explore' || document.querySelector('.modal.visible')) return;
+    const {x,y}=gameState.player;
+    for(const n of [[0,1],[0,-1],[1,0],[-1,0]]){
+      if(World.getTile(x+n[0],y+n[1])===T.DOOR){ UI.checkWinCondition(); return; }
+    }
+    for(const id in DB.npcs){ const n=DB.npcs[id];
+      if(n.level===gameState.player.level && Math.abs(n.pos.x-x)+Math.abs(n.pos.y-y)<=1){ NPC.start(id); return; }
+    }
+  },
+  checkTile(){
+    const {x,y}=gameState.player; const tt=World.getTile(x,y);
+    if(tt===T.TOWER && gameState.elevatorUnlocked) UI.showLevelSelect();
+    else if(tt===T.QUILL) World.collectQuill(x,y);
+    else if(tt===T.DOOR) UI.checkWinCondition();
+  }
 };
 
 const NPC = {
-    startInteraction: (npcId) => {
-        gameState.gameMode = 'dialogue';
-        gameState.activeNPC = npcId;
-        const npc = DATABASE.npcs[npcId];
-        
-        if (gameState.completedQuizzes.includes(npcId)) {
-            UI.showDialogue("You've already passed my quiz. Well done!");
-            document.getElementById('talk-button').style.display = 'none';
-        } else {
-            UI.showDialogue(npc.dialogue);
-            document.getElementById('talk-button').style.display = 'block';
-        }
-    }
-};
-
-const initialGameState = JSON.parse(JSON.stringify(gameState));
-
-const Game = {
-    reset: () => {
-        gameState = JSON.parse(JSON.stringify(initialGameState));
-        World.init(); 
-        gameState.startTime = Date.now();
-        World.loadLevel('ground');
-        UI.closeModals();
-        UI.update();
-    },
-    startBossBattle: () => {
-        // No boss battle - directly win
-        UI.winGame();
-    }
-};
-
-const UI = {
-    update: () => {
-        document.querySelectorAll('.modal').forEach(m => m.classList.remove('visible'));
-        const modalId = {
-            dialogue: 'dialogue-modal', 
-            question: 'question-modal',
-            feedback: 'feedback-modal', 
-            won: 'win-modal', 
-            modal: 'info-modal',
-            codex: 'codex-modal',
-            puzzle: 'master-puzzle-modal'
-        }[gameState.gameMode];
-
-        const statsPanel = document.getElementById('game-stats-panel');
-        const mobileControls = document.getElementById('mobile-controls');
-        const topButtons = document.querySelector('.top-ui-buttons');
-        
-        statsPanel.style.display = 'block';
-        if(window.innerWidth <= 1024) mobileControls.style.display = 'flex'; // Adjusted breakpoint
-        topButtons.style.display = 'flex';
-        if (playerMesh) playerMesh.visible = true;
-
-        if (modalId) {
-            document.getElementById(modalId).classList.add('visible');
-        }
-    },
-    showDialogue: (text) => {
-        document.getElementById('dialogue-text').textContent = text;
-        gameState.gameMode = 'dialogue';
-        document.getElementById('talk-button').textContent = "Attempt Quiz";
-        UI.update();
-    },
-    startQuiz: () => {
-        const npcId = gameState.activeNPC;
-        const npc = DATABASE.npcs[npcId];
-        const questions = DATABASE.questions[npc.punctuation];
-
-        if (!questions || questions.length < 3) {
-            UI.showInfo("Something went wrong, I don't have enough questions!");
-            return;
-        }
-        
-        gameState.quizStartTime = Date.now();
-        gameState.currentQuiz = {
-            questions: questions,
-            currentIdx: 0,
-            correctCount: 0
-        };
-        UI.showQuizQuestion();
-    },
-    
-showQuizQuestion: () => {
-        if (!gameState.currentQuiz) return;
-        const quiz = gameState.currentQuiz;
-        const questionData = quiz.questions[quiz.currentIdx];
-        
-        gameState.gameMode = 'question';
-        
-        // Update header with "Quest" feel
-        const counter = document.getElementById('quiz-counter');
-        counter.textContent = `Punctuation Challenge: ${quiz.currentIdx + 1} of ${quiz.questions.length}`;
-        
-        document.getElementById('question-text').textContent = questionData.q;
-        const optionsContainer = document.getElementById('answer-options');
-        optionsContainer.innerHTML = '';
-
-        // 1. Create a map of options that remembers their original index
-        let choices = questionData.o.map((text, index) => {
-            return { text: text, originalIndex: index };
-        });
-
-        // 2. Shuffle the choices array (Fisher-Yates)
-        for (let i = choices.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [choices[i], choices[j]] = [choices[j], choices[i]];
-        }
-
-        // 3. Render the shuffled buttons
-        choices.forEach((choice) => {
-            const button = document.createElement('button');
-            button.textContent = choice.text;
-            // When clicked, it submits its ORIGINAL index so grading stays accurate
-            button.onclick = () => UI.submitAnswer(choice.originalIndex);
-            optionsContainer.appendChild(button);
-        });
-        
-        document.getElementById('close-feedback-button').onclick = UI.nextQuizQuestion;
-        UI.update();
-    },
-
-    submitAnswer: (answerIndex) => {
-        const quiz = gameState.currentQuiz;
-        const questionData = quiz.questions[quiz.currentIdx];
-        
-        const isCorrect = (answerIndex === questionData.a);
-        let feedbackText;
-        
-        if(isCorrect) {
-            feedbackText = `CORRECT! ${questionData.f}`;
-            quiz.correctCount++;
-        } else {
-            feedbackText = `Not quite. ${questionData.f}`;
-            const alreadyLogged = gameState.wrongAnswers.some(wa => wa.q === questionData.q);
-            if (!alreadyLogged) {
-                gameState.wrongAnswers.push({
-                    q: questionData.q,
-                    yourAnswer: questionData.o[answerIndex],
-                    correctAnswer: questionData.o[questionData.a],
-                    explanation: questionData.f
-                });
-            }
-        }
-        
-        gameState.gameMode = 'feedback';
-        const feedbackPanel = document.getElementById('feedback-panel');
-        feedbackPanel.textContent = feedbackText;
-        feedbackPanel.className = isCorrect ? 'success' : 'error';
-        UI.update();
-    },
-    nextQuizQuestion: () => {
-        const quiz = gameState.currentQuiz;
-        if (!quiz) {
-            UI.closeModals();
-            return;
-        }
-
-        quiz.currentIdx++;
-        if (quiz.currentIdx < quiz.questions.length) {
-            UI.showQuizQuestion();
-        } else {
-            UI.endQuiz();
-        }
-    },
-    endQuiz: () => {
-        const quiz = gameState.currentQuiz;
-        const npcId = gameState.activeNPC;
-        if (quiz.correctCount === quiz.questions.length) {
-            gameState.completedQuizzes.push(npcId);
-            UI.handleQuizSuccess();
-        } else {
-            if (!gameState.failedQuizzes.includes(npcId)) {
-                gameState.failedQuizzes.push(npcId);
-            }
-            UI.showInfo(`You answered ${quiz.correctCount} out of 3 questions correctly. You must get all 3 right in one attempt to earn the reward. Please try again!`);
-        }
-        gameState.currentQuiz = null;
-        gameState.quizStartTime = null;
-        document.getElementById('close-info-button').onclick = UI.closeModals;
-    },
-    handleQuizSuccess: () => {
-        const npcId = gameState.activeNPC;
-        const punctuationType = DATABASE.npcs[npcId].punctuation;
-        if (!gameState.unlockedCodexEntries.includes(punctuationType)) {
-            gameState.unlockedCodexEntries.push(punctuationType);
-        }
-
-        let successMessage = "Excellent! You answered all questions correctly. ";
-        
-        const quizTimeSec = Math.floor((Date.now() - gameState.quizStartTime) / 1000);
-        const timeBonus = Math.max(100 - (quizTimeSec * 5), 0);
-        gameState.score += 1000 + timeBonus;
-        successMessage += `You earned a time bonus of ${timeBonus} points! `;
-
-        switch(punctuationType) {
-            case 'period':
-                gameState.inventory.wood = 3;
-                successMessage += "You received 3 wood for the bridge!";
-                break;
-            case 'comma':
-                if (gameState.inventory.wood >= 3) {
-                    gameState.inventory.wood = 0;
-                    World.updateBridge();
-                    successMessage += "You used your wood to build the bridge!";
-                } else {
-                    gameState.completedQuizzes = gameState.completedQuizzes.filter(id => id !== npcId);
-                    successMessage = "Correct! But you need 3 wood. Find the Lumberjack first.";
-                }
-                break;
-            case 'question_mark':
-                gameState.elevatorUnlocked = true;
-                successMessage += "The Tower Elevator is now unlocked!";
-                break;
-            default:
-                successMessage += `You have mastered the ${punctuationType.replace('_', ' ')}! Its entry is now unlocked in the Codex.`;
-        }
-        
-        UI.showInfo(successMessage);
-        if (gameState.completedQuizzes.length >= 12) {
-            UI.showInfo("You have mastered all 12 marks! Walk into the final door in the Depths to claim your victory!");
-        }
-    },
-    closeModals: () => {
-        gameState.gameMode = 'explore';
-        gameState.activeNPC = null;
-        gameState.currentQuiz = null;
-        gameState.quizStartTime = null;
-        document.querySelectorAll('.modal').forEach(m => m.classList.remove('visible'));
-    },
-    updateUI: () => {
-        const elapsed = Date.now() - gameState.startTime;
-        const seconds = Math.floor(elapsed / 1000) % 60;
-        const minutes = Math.floor(elapsed / (1000 * 60));
-        document.getElementById('timer-display').textContent = 
-            `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-        
-        document.getElementById('score-display').textContent = gameState.score;
-        document.getElementById('keys-display').textContent = `${gameState.completedQuizzes.length} / 12`;
-        document.getElementById('quill-count').textContent = `${gameState.inventory.goldenQuills} / ${TOTAL_QUILLS}`;
-    },
-    checkWinCondition: () => {
-        if (gameState.completedQuizzes.length >= 12) {
-             // UI.winGame(); - REMOVE THIS from here
-             // Instead of winning immediately on touch, start the boss battle
-             Game.startBossBattle(); 
-        } else {
-             UI.showInfo(`The Door of Expression is sealed. You need to pass all 12 quizzes. You have only completed ${gameState.completedQuizzes.length}.`);
-        }
-    },
-    startMasterPuzzle: () => {
-        // Kept for compatibility but not used
-    },
-    submitMasterPuzzle: () => {
-        // Kept for compatibility but not used
-    },
-winGame: () => {
-    gameState.gameMode = 'won';
-    const finalTimeMs = Date.now() - gameState.startTime;
-    const finalTimeSec = Math.floor(finalTimeMs / 1000);
-
-    // Calculate score logic
-    const timePenalty = finalTimeSec * 2;
-    let finalScore = gameState.score - timePenalty;
-    if (gameState.inventory.goldenQuills === TOTAL_QUILLS) finalScore += 5000;
-    
-    const perfectRun = gameState.failedQuizzes.length === 0;
-    if (perfectRun) finalScore += 10000;
-    finalScore = Math.max(Math.round(finalScore), 0);
-
-    // Update UI elements
-    document.getElementById('final-time').textContent = document.getElementById('timer-display').textContent;
-    document.getElementById('final-score').textContent = finalScore;
-    
-    const reviewContent = document.getElementById('review-content');
-    reviewContent.innerHTML = `<h4>Punctuation Marks Mastered:</h4>`;
-    
-    // 1. Create a checklist of all 12 marks for the summary
-    const marksList = document.createElement('div');
-    marksList.style.display = 'grid';
-    marksList.style.gridTemplateColumns = 'repeat(3, 1fr)';
-    marksList.style.gap = '10px';
-    marksList.style.marginBottom = '20px';
-
-    const allMarks = ['Period', 'Comma', 'Question Mark', 'Exclamation Point', 'Apostrophe', 'Quotes', 'Semicolon', 'Colon', 'Parentheses', 'Hyphen', 'Ellipsis', 'Brackets'];
-    
-    allMarks.forEach(mark => {
-        const item = document.createElement('div');
-        item.style.color = '#55b871';
-        item.innerHTML = `✅ ${mark}`;
-        marksList.appendChild(item);
-    });
-    reviewContent.appendChild(marksList);
-
-    // 2. Add Personalized Feedback
-    const feedbackMsg = document.createElement('p');
-    feedbackMsg.style.fontStyle = 'italic';
-    feedbackMsg.style.borderTop = '1px solid var(--ui-border)';
-    feedbackMsg.style.paddingTop = '10px';
-    
-    if (perfectRun) {
-        feedbackMsg.textContent = "Grammarlin stands defeated! You are a Punctuation Master—not a single mistake was made.";
-        document.getElementById('perfect-run-bonus').style.display = 'block';
+  start(id){
+    gameState.gameMode='dialogue'; gameState.activeNPC=id;
+    const n=DB.npcs[id];
+    if(gameState.completedQuizzes.includes(id)){
+      UI.showDialogue(`You've already restored the ${n.punctuation.replace(/_/g,' ')}. The realm thanks you!`, false);
     } else {
-        feedbackMsg.textContent = `You restored order to the Tower! Total mistakes made: ${gameState.wrongAnswers.length}. Review them below to perfect your skills.`;
+      UI.showDialogue(n.dialogue, true);
     }
-    reviewContent.appendChild(feedbackMsg);
-
-    // 3. Keep existing wrong answer reviews below the summary
-    gameState.wrongAnswers.forEach(item => {
-        const div = document.createElement('div');
-        div.className = 'review-item';
-        div.innerHTML = `
-            <p><strong>Mistake on:</strong> ${item.q}</p>
-            <p class="correct-answer">💡 ${item.explanation}</p>
-        `;
-        reviewContent.appendChild(div);
-    });
-
-    UI.update();
-},
-
-    showInfo: (text) => {
-        gameState.gameMode = 'modal';
-        document.getElementById('info-text').textContent = text;
-        document.getElementById('close-info-button').onclick = UI.closeModals;
-        UI.update();
-    },
-    showLevelSelect: () => {
-        gameState.gameMode = 'modal';
-        const { level } = gameState.player;
-        document.getElementById('goto-ground-button').style.display = level !== 'ground' ? 'block' : 'none';
-        document.getElementById('goto-sky-button').style.display = level !== 'sky' ? 'block' : 'none';
-        document.getElementById('goto-depths-button').style.display = level !== 'depths' ? 'block' : 'none';
-        document.getElementById('level-select-modal').classList.add('visible');
-    },
-    showCodex: () => {
-        gameState.gameMode = 'codex';
-        
-        // Safety check to prevent error if database isn't loaded
-        if (!DATABASE.codex) return;
-
-        const list = document.getElementById('codex-list');
-        const content = document.getElementById('codex-content');
-        list.innerHTML = '';
-        content.innerHTML = '<h3>Select an entry to read.</h3>';
-
-        Object.keys(DATABASE.codex).forEach(key => {
-            const entry = DATABASE.codex[key];
-            const item = document.createElement('div');
-            item.className = 'codex-item';
-            item.textContent = entry.title;
-            
-            if (gameState.unlockedCodexEntries.includes(key)) {
-                item.classList.add('codex-unlocked');
-                item.onclick = () => UI.displayCodexEntry(key);
-            } else {
-                item.classList.add('codex-locked');
-                item.textContent += " (Locked)";
-            }
-            list.appendChild(item);
-        });
-        UI.update();
-    },
-    displayCodexEntry: (key) => {
-        const entry = DATABASE.codex[key];
-        const content = document.getElementById('codex-content');
-        let examplesHtml = '<ul>';
-        entry.examples.forEach(ex => {
-            examplesHtml += `<li>${ex}</li>`;
-        });
-        examplesHtml += '</ul>';
-
-        content.innerHTML = `
-            <h3>${entry.title}</h3>
-            <p>${entry.description}</p>
-            <h4>Examples:</h4>
-            ${examplesHtml}
-        `;
-    }
+  }
 };
 
-// ADD THE DEFINITION ABOVE ANIMATE (Around line 383)
-function updateParticles() {
-    for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i];
-        p.position.add(p.userData.velocity);
-        p.material.opacity -= 0.02;
-        if (p.material.opacity <= 0) {
-            scene.remove(p);
-            particles.splice(i, 1);
-        }
+// ===================== SAVE =====================
+const Save = {
+  write(){
+    try{
+      const s={ player:gameState.player, inventory:gameState.inventory,
+        completedQuizzes:gameState.completedQuizzes, unlockedCodexEntries:gameState.unlockedCodexEntries,
+        wrongAnswers:gameState.wrongAnswers, failedQuizzes:gameState.failedQuizzes,
+        collectedQuills:gameState.collectedQuills, bridgeBuilt:gameState.bridgeBuilt,
+        elevatorUnlocked:gameState.elevatorUnlocked, score:gameState.score,
+        elapsedMs: gameState.startTime? (Date.now()-gameState.startTime):0 };
+      localStorage.setItem(SAVE_KEY, JSON.stringify(s));
+    }catch(e){}
+  },
+  read(){ try{ const r=localStorage.getItem(SAVE_KEY); return r?JSON.parse(r):null; }catch(e){ return null; } },
+  clear(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} },
+  best(v){ try{ if(v!==undefined){ const b=Save.best(); if(v>b) localStorage.setItem(BEST_KEY,String(v)); return; } return parseInt(localStorage.getItem(BEST_KEY)||'0',10); }catch(e){ return 0; } }
+};
+// ===================== UI =====================
+const UI = {
+  show(id){ document.querySelectorAll('.modal').forEach(m=>m.classList.remove('visible')); if(id) document.getElementById(id).classList.add('visible'); },
+  refresh(){
+    const map={ dialogue:'dialogue-modal', question:'question-modal', feedback:'feedback-modal',
+      won:'win-modal', modal:'info-modal', codex:'codex-modal' };
+    UI.show(map[gameState.gameMode]);
+  },
+  showDialogue(text, canQuiz){
+    gameState.gameMode='dialogue';
+    document.getElementById('dialogue-text').innerHTML=text;
+    document.getElementById('talk-button').style.display = canQuiz?'block':'none';
+    UI.refresh();
+  },
+  startQuiz(){
+    const n=DB.npcs[gameState.activeNPC]; const qs=DB.questions[n.punctuation];
+    if(!qs||qs.length<3){ UI.showInfo("Something went wrong &mdash; not enough questions!"); return; }
+    gameState.quizStartTime=Date.now();
+    gameState.currentQuiz={ questions:qs, idx:0, correct:0, kind:'trial' };
+    UI.showQuestion();
+  },
+  showQuestion(){
+    const quiz=gameState.currentQuiz; if(!quiz) return;
+    const isFinale = quiz.kind==='finale';
+    document.getElementById('question-modal').classList.toggle('combat', isFinale);
+    const qd=quiz.questions[quiz.idx];
+    gameState.gameMode='question';
+    document.getElementById('quiz-counter').innerHTML = isFinale
+      ? `Chaos Showdown &mdash; hit ${quiz.correct}/${quiz.needed}`
+      : `Trial: ${quiz.idx+1} of ${quiz.questions.length}`;
+    document.getElementById('question-text').innerHTML = (isFinale? `<em style="color:var(--pink)">"${qd.taunt}"</em><br><br>`:'') + qd.q;
+    const box=document.getElementById('answer-options'); box.innerHTML='';
+    const choices=qd.o.map((t,i)=>({t,i}));
+    for(let i=choices.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [choices[i],choices[j]]=[choices[j],choices[i]]; }
+    choices.forEach(ch=>{ const b=document.createElement('button'); b.innerHTML=ch.t; b.onclick=()=>UI.answer(ch.i,b); box.appendChild(b); });
+    document.getElementById('exit-quiz-button').style.display = isFinale?'none':'block';
+    UI.refresh();
+  },
+  answer(idx,btn){
+    const quiz=gameState.currentQuiz; const qd=quiz.questions[quiz.idx];
+    const ok = idx===qd.a;
+    const box=document.getElementById('answer-options');
+    [...box.children].forEach((b,i)=>{ b.onclick=null; b.style.pointerEvents='none'; });
+    btn.classList.add(ok?'correct':'wrong');
+    if(!ok){ btn.classList.add('shake'); [...box.children].forEach(b=>{ if(b.textContent===qd.o[qd.a]) b.classList.add('correct'); }); }
+    if(ok) quiz.correct++;
+    if(!ok){
+      const logged=gameState.wrongAnswers.some(w=>w.q===qd.q);
+      if(!logged) gameState.wrongAnswers.push({ q:qd.q, correctAnswer:qd.o[qd.a], explanation:qd.f });
     }
+    if(quiz.kind==='finale'){ Boss.onAnswer(ok, qd); return; }
+    setTimeout(()=>{
+      gameState.gameMode='feedback';
+      document.getElementById('feedback-modal').classList.remove('combat');
+      const fp=document.getElementById('feedback-panel');
+      fp.innerHTML = ok? `&#9989; Correct! ${qd.f}` : `&#10060; Not quite. ${qd.f}`;
+      fp.className = ok?'success':'error';
+      document.getElementById('close-feedback-button').onclick = UI.nextQuestion;
+      UI.refresh();
+    },720);
+  },
+  nextQuestion(){
+    const quiz=gameState.currentQuiz; if(!quiz){ UI.closeModals(); return; }
+    quiz.idx++;
+    if(quiz.idx<quiz.questions.length) UI.showQuestion(); else UI.endQuiz();
+  },
+  endQuiz(){
+    const quiz=gameState.currentQuiz, id=gameState.activeNPC;
+    if(quiz.correct===quiz.questions.length){ gameState.completedQuizzes.push(id); UI.handleSuccess(); }
+    else {
+      if(!gameState.failedQuizzes.includes(id)) gameState.failedQuizzes.push(id);
+      UI.showInfo(`You got ${quiz.correct} of ${quiz.questions.length} right. You need all three correct in one attempt to win the mark &mdash; give it another go!`);
+    }
+    gameState.currentQuiz=null; gameState.quizStartTime=null; Save.write();
+  },
+  handleSuccess(){
+    const id=gameState.activeNPC, mark=DB.npcs[id].punctuation;
+    const quizSec=Math.floor((Date.now()-(gameState.quizStartTime||Date.now()))/1000);
+    const timeBonus=Math.max(100-quizSec*5,0);
+    gameState.score += 1000 + timeBonus;
+    let msg=`Excellent &mdash; all three correct! +${1000+timeBonus} points (${timeBonus} time bonus). `;
+    let unlockCodex=true;
+    switch(mark){
+      case 'question_mark': gameState.elevatorUnlocked=true; msg+="The Tower Elevator hums to life &mdash; you can now travel between realms!"; break;
+      default: msg+=`You've restored the ${mark.replace(/_/g,' ')}! Its entry is unlocked in the Codex.`;
+    }
+    // The bridge rises only after all three starting ground guardians (period, comma, exclamation) are restored &mdash; in any order
+    const groundStarters = Object.keys(DB.npcs).filter(k=>DB.npcs[k].level==='ground' && k!=='guide');
+    if(!gameState.bridgeBuilt && groundStarters.every(k=>gameState.completedQuizzes.includes(k))){
+      World.updateBridge();
+      msg+=" With all three ground guardians restored, a bridge rises across the river &mdash; the far bank is now open!";
+    }
+    if(unlockCodex && !gameState.unlockedCodexEntries.includes(mark)) gameState.unlockedCodexEntries.push(mark);
+    // refresh npc appearance if still on same level
+    const nm=npcGroup.getObjectByName(`npc-${id}`); if(nm && gameState.completedQuizzes.includes(id)) World.markNpcComplete(nm);
+    Save.write();
+    const all12 = gameState.completedQuizzes.length>=12;
+    UI.showInfo(msg, all12 ? ()=>UI.showInfo("&#9733; All 12 marks restored! Return to the Depths of Grammar and step through the Door of Expression to face Grammarlin.") : null);
+  },
+  closeModals(){ gameState.gameMode='explore'; gameState.activeNPC=null; gameState.currentQuiz=null; gameState.quizStartTime=null; UI.show(null); },
+  showInfo(text,onClose){
+    gameState.gameMode='modal';
+    document.getElementById('info-text').innerHTML=text;
+    document.getElementById('close-info-button').onclick = onClose? ()=>onClose() : UI.closeModals;
+    UI.refresh();
+  },
+  showLevelSelect(){
+    gameState.gameMode='modal';
+    const lv=gameState.player.level;
+    document.getElementById('goto-ground-button').style.display=lv!=='ground'?'block':'none';
+    document.getElementById('goto-sky-button').style.display=lv!=='sky'?'block':'none';
+    document.getElementById('goto-depths-button').style.display=lv!=='depths'?'block':'none';
+    UI.show('level-select-modal');
+  },
+  travel(level){
+    UI.show(null);
+    UI.transition(level, ()=>{ gameState.player.level=level; World.loadLevel(level); UI.closeModals(); Save.write(); });
+  },
+  transition(level,cb){
+    const t=document.getElementById('transition');
+    const labels={ground:'GROUND LEVEL',sky:'THE SKY TOWER',depths:'THE DEPTHS OF GRAMMAR',boss:'CHAOS SHOWDOWN'};
+    const gl={ground:'&#127794;',sky:'&#10022;',depths:'&#128293;',boss:'&#128520;'};
+    t.querySelector('.t-glyph').innerHTML=gl[level]||'&#10022;';
+    t.querySelector('.t-label').textContent=labels[level]||'';
+    t.classList.add('on');
+    setTimeout(()=>{ cb&&cb(); }, 420);
+    setTimeout(()=>{ t.classList.remove('on'); }, 1050);
+  },
+  updateHUD(){
+    if(!gameState.startTime) return;
+    const el=Date.now()-gameState.startTime, s=Math.floor(el/1000)%60, m=Math.floor(el/60000);
+    document.getElementById('timer-display').textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    document.getElementById('score-display').textContent=gameState.score;
+    document.getElementById('keys-display').textContent=`${Math.min(gameState.completedQuizzes.length,12)} / 12`;
+    document.getElementById('quill-count').textContent=`${gameState.inventory.goldenQuills} / ${TOTAL_QUILLS}`;
+  },
+  checkWinCondition(){
+    if(gameState.completedQuizzes.length>=12) Boss.begin();
+    else UI.showInfo(`The Door of Expression is sealed. Restore all 12 marks first &mdash; you have ${gameState.completedQuizzes.length}.`);
+  },
+  toast(html){ const t=document.getElementById('toast'); t.innerHTML=html; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2600); },
+  showCodex(){
+    gameState.gameMode='codex'; if(!DB.codex) return;
+    const list=document.getElementById('codex-list'), content=document.getElementById('codex-content');
+    list.innerHTML=''; content.innerHTML='<h3>Select an entry to read.</h3><p style="color:var(--ink-dim)">Restore a mark from its guardian to unlock its page.</p>';
+    Object.keys(DB.codex).forEach(k=>{
+      const e=DB.codex[k], it=document.createElement('div'); it.className='codex-item'; it.innerHTML=e.title;
+      if(gameState.unlockedCodexEntries.includes(k)){ it.classList.add('codex-unlocked'); it.onclick=()=>UI.codexEntry(k); }
+      else { it.classList.add('codex-locked'); it.innerHTML+=' &#128274;'; }
+      list.appendChild(it);
+    });
+    UI.refresh();
+  },
+  codexEntry(k){
+    const e=DB.codex[k];
+    document.getElementById('codex-content').innerHTML =
+      `<h3>${e.title}</h3><p>${e.description}</p><h4>Examples</h4><ul>${e.examples.map(x=>`<li>${x}</li>`).join('')}</ul>`;
+  }
+};
+// ===================== BOSS: CHAOS SHOWDOWN =====================
+let shake=0;
+const Boss = {
+  hits:0, needed:6, active:false,
+  begin(){
+    UI.closeModals();
+    UI.transition('boss', ()=>{
+      gameState.player.level='boss';
+      World.loadLevel('boss');
+      gameState.player.x=4; gameState.player.y=4;
+      playerTarget.set(40,4,40); if(playerMesh) playerMesh.position.copy(playerTarget);
+      if(bossMesh){ scene.remove(bossMesh); }
+      bossMesh = Models.boss();
+      bossMesh.position.set(40,0,10);
+      scene.add(bossMesh);
+      if(playerMesh) playerMesh.visible=false;
+      Boss.hits=0; Boss.active=true;
+      document.getElementById('boss-hud').style.display='block';
+      document.getElementById('boss-hp-fill').style.width='100%';
+      setTimeout(()=>Boss.start(), 700);
+    });
+  },
+  start(){
+    const qs = DB.finale.slice();
+    for(let i=qs.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [qs[i],qs[j]]=[qs[j],qs[i]]; }
+    gameState.gameMode='question';
+    gameState.currentQuiz={ questions:qs, idx:0, correct:0, kind:'finale', needed:Boss.needed };
+    UI.showQuestion();
+  },
+  onAnswer(ok, qd){
+    const quiz=gameState.currentQuiz;
+    if(ok){
+      Boss.hits++;
+      bossMesh.userData.hitTimer=0.5; shake=0.7;
+      Boss.burst('#31e6ff', 22);
+      const pct=Math.max(0,100-(Boss.hits/Boss.needed)*100);
+      document.getElementById('boss-hp-fill').style.width=pct+'%';
+      quiz.correct=Boss.hits;
+      if(Boss.hits>=Boss.needed){ setTimeout(()=>Boss.defeat(), 620); return; }
+      Boss.feedback(true, `&#9889; Direct hit! ${qd.f}`);
+    } else {
+      if(!gameState.failedQuizzes.includes('finale')) gameState.failedQuizzes.push('finale');
+      shake=1.0; Boss.burst('#ff3d6e', 14);
+      Boss.feedback(false, `&#128520; Grammarlin cackles: "Chaos wins again!"<br>${qd.f}`);
+    }
+  },
+  feedback(ok, html){
+    setTimeout(()=>{
+      gameState.gameMode='feedback';
+      document.getElementById('feedback-modal').classList.add('combat');
+      const fp=document.getElementById('feedback-panel'); fp.innerHTML=html; fp.className=ok?'success':'error';
+      document.getElementById('close-feedback-button').onclick=()=>{ Boss.next(); };
+      UI.refresh();
+    },700);
+  },
+  next(){
+    const quiz=gameState.currentQuiz; quiz.idx++;
+    if(quiz.idx>=quiz.questions.length){
+      for(let i=quiz.questions.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [quiz.questions[i],quiz.questions[j]]=[quiz.questions[j],quiz.questions[i]]; }
+      quiz.idx=0;
+    }
+    UI.showQuestion();
+  },
+  burst(color, n){
+    if(!bossMesh) return;
+    for(let i=0;i<n;i++){ const p=new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshBasicMaterial({color, transparent:true}));
+      p.position.copy(bossMesh.position); p.position.y+=16;
+      p.userData.v=new THREE.Vector3((Math.random()-.5)*2.6,(Math.random()-.2)*2.4,(Math.random()-.5)*2.6); fxGroup.add(p); particles.push(p); }
+  },
+  defeat(){
+    Boss.active=false; gameState.gameMode='cutscene'; UI.show(null); document.getElementById('boss-hud').style.display='none';
+    document.getElementById('question-modal').classList.remove('combat'); document.getElementById('feedback-modal').classList.remove('combat');
+    if(bossMesh) bossMesh.userData.defeated=true;
+    const glyphs=['.',',','?','!',"'",'"',';',':','(',')','-','…'];
+    for(let i=0;i<30;i++){ const s=glyphSprite(glyphs[i%glyphs.length], ['#31e6ff','#ffd23f','#ff3d6e','#4be08a'][i%4], 80);
+      s.position.copy(bossMesh.position); s.position.y+=16; s.scale.set(4,4,1);
+      s.userData.v=new THREE.Vector3((Math.random()-.5)*3,(Math.random()*2.2),(Math.random()-.5)*3); s.userData.spin=true; fxGroup.add(s); particles.push(s); }
+    shake=1.4;
+    setTimeout(()=>UI.winGame(), 1700);
+  }
+};
+
+// ===================== WIN =====================
+UI.winGame = function(){
+  gameState.gameMode='won';
+  const sec=Math.floor((Date.now()-gameState.startTime)/1000);
+  let score = gameState.score - sec*2;
+  if(gameState.inventory.goldenQuills===TOTAL_QUILLS) score+=5000;
+  const perfect = gameState.failedQuizzes.length===0;
+  if(perfect) score+=10000;
+  score=Math.max(Math.round(score),0);
+  const best=Save.best(); Save.best(score);
+
+  document.getElementById('final-time').textContent=document.getElementById('timer-display').textContent;
+  document.getElementById('final-score').textContent=score.toLocaleString();
+  document.getElementById('best-score').textContent=Math.max(best,score).toLocaleString();
+  document.getElementById('perfect-run-bonus').style.display = perfect?'block':'none';
+
+  const rc=document.getElementById('review-content'); rc.innerHTML='';
+  const grid=document.createElement('div'); grid.style.cssText='display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px';
+  ['Period','Comma','Question','Exclaim','Apostrophe','Quotes','Semicolon','Colon','Parentheses','Hyphen','Ellipsis','Brackets']
+    .forEach(m=>{ const d=document.createElement('div'); d.style.color='#4be08a'; d.innerHTML='&#9989; '+m; grid.appendChild(d); });
+  rc.appendChild(grid);
+
+  const p=document.createElement('p'); p.style.cssText='font-style:italic;border-top:1px solid var(--pink);padding-top:12px';
+  if(perfect) p.innerHTML="Grammarlin stands defeated &mdash; and you didn't miss a single mark. Flawless.";
+  else if(gameState.wrongAnswers.length) p.innerHTML=`You restored order to the realms! Slip-ups along the way: ${gameState.wrongAnswers.length}. Review them below to sharpen up.`;
+  else p.innerHTML="You restored order to the realms!";
+  rc.appendChild(p);
+
+  gameState.wrongAnswers.forEach(w=>{ const d=document.createElement('div'); d.className='review-item';
+    d.innerHTML=`<p><strong>Tricky one:</strong> ${w.q}</p><p style="color:var(--green)">&#128161; ${w.explanation}</p>`; rc.appendChild(d); });
+
+  Save.clear();
+  UI.refresh();
+};
+// ===================== ANIMATE =====================
+function updateParticles(){
+  for(let i=particles.length-1;i>=0;i--){ const p=particles[i];
+    p.position.add(p.userData.v); p.userData.v.y-=0.045;
+    if(p.userData.spin) p.material.rotation+=0.1;
+    p.material.opacity = (p.material.opacity===undefined?1:p.material.opacity)-0.018;
+    if(p.material.opacity<=0){ fxGroup.remove(p); particles.splice(i,1); }
+  }
 }
 
-function animate() {
-    requestAnimationFrame(animate);
-    
-    if (gameState.gameMode !== 'won' && gameState.startTime) {
-        UI.updateUI();
+function animate(){
+  requestAnimationFrame(animate);
+  if(gameState.gameMode!=='won' && gameState.startTime) UI.updateHUD();
+
+  // player smooth move + walk anim
+  if(playerMesh){
+    const before=playerMesh.position.clone();
+    playerMesh.position.lerp(playerTarget,0.28);
+    const dist=playerMesh.position.distanceTo(playerTarget);
+    moving = dist>0.6;
+    if(moving){ walkPhase+=0.35;
+      const sw=Math.sin(walkPhase)*0.9;
+      const ll=playerMesh.getObjectByName('legL'), lr=playerMesh.getObjectByName('legR');
+      const al=playerMesh.getObjectByName('armL'), ar=playerMesh.getObjectByName('armR');
+      if(ll){ ll.rotation.x=sw; lr.rotation.x=-sw; al.rotation.x=-sw; ar.rotation.x=sw; }
+      playerMesh.position.y=4+Math.abs(Math.sin(walkPhase))*0.8;
+    } else {
+      ['legL','legR','armL','armR'].forEach(n=>{ const o=playerMesh.getObjectByName(n); if(o) o.rotation.x*=0.7; });
     }
-    
-    collectiblesGroup.children.forEach(quill => {
-        quill.rotation.y += 0.05;
-        quill.position.y = 5 + Math.sin(Date.now() * 0.003) * 1.5; 
-    });
+    const rot={up:Math.PI,down:0,left:-Math.PI/2,right:Math.PI/2}[gameState.player.dir];
+    let d=rot-playerMesh.rotation.y; while(d>Math.PI)d-=Math.PI*2; while(d<-Math.PI)d+=Math.PI*2;
+    playerMesh.rotation.y+=d*0.3;
+    const bossCam = gameState.player.level==='boss';
+    playerLight.position.set(bossCam?40:playerMesh.position.x, bossCam?34:18, bossCam?12:playerMesh.position.z);
 
-    if (stars && stars.visible) stars.rotation.y += 0.0001;
+    if(bossCam){ camTarget.set(40,46,64); } else { camTarget.set(playerMesh.position.x, 92, playerMesh.position.z+62); }
+    camera.position.lerp(camTarget,0.12);
+    if(shake>0){ camera.position.x+=(Math.random()-.5)*shake*6; camera.position.y+=(Math.random()-.5)*shake*4; shake*=0.86; if(shake<0.02)shake=0; }
+    if(bossCam){ camera.lookAt(40,15,10); } else { camera.lookAt(playerMesh.position.x,0,playerMesh.position.z); }
+  }
 
-    // THE MOLTEN COLOR ENGINE: Red/Yellow Rolling Waves
-    if (lavaFloor && lavaFloor.visible && gameState.player.level === 'depths') {
-        const time = Date.now() * 0.0018; 
-        const pos = lavaFloor.geometry.attributes.position.array;
-        const colors = lavaFloor.geometry.attributes.color.array;
-        
-        for (let i = 0; i < pos.length; i += 3) {
-            const x = pos[i];
-            const y = pos[i + 1];
-            
-            // Calculate rolling wave height
-            const h = Math.sin(x * 0.04 + time) * 3.5 + Math.cos(y * 0.04 + time) * 3.5;
-            pos[i + 2] = h;
+  collectiblesGroup.children.forEach(q=>{ if(!q.visible) return; q.rotation.y+=0.05; q.position.y=5+Math.sin(Date.now()*0.003+q.position.x)*1.4; });
+  npcGroup.children.forEach(n=>{ const g=n.getObjectByName('glyph'); if(g) g.position.y=14+Math.sin(Date.now()*0.0025+n.position.x)*1.1; const r=n.getObjectByName('ring'); if(r) r.rotation.z+=0.01; });
+  if(stars&&stars.visible) stars.rotation.y+=0.0001;
 
-            // Map height to fiery colors: peaks are glowing yellow, valleys are red
-            const ratio = Math.max(0, Math.min(1, (h + 3.5) / 7)); 
-            colors[i] = 0.7 + (ratio * 0.3);   // Red Channel
-            colors[i + 1] = ratio * 0.9;      // Green Channel (Combined with Red = Yellow)
-            colors[i + 2] = 0;                // Blue Channel
-        }
-        lavaFloor.geometry.attributes.position.needsUpdate = true;
-        lavaFloor.geometry.attributes.color.needsUpdate = true;
-        lavaFloor.material.emissiveIntensity = 0.6 + Math.sin(time) * 0.4;
+  // boss anim
+  if(bossMesh){
+    const t=Date.now()*0.002;
+    if(!bossMesh.userData.defeated){
+      bossMesh.position.y = Math.sin(t)*1.6;
+      bossMesh.rotation.y = Math.sin(t*0.5)*0.15;
+      const al=bossMesh.getObjectByName('armL'), ar=bossMesh.getObjectByName('armR');
+      if(al){ al.rotation.z=0.6+Math.sin(t*2)*0.25; ar.rotation.z=-0.6-Math.sin(t*2)*0.25; }
+      if(bossMesh.userData.hitTimer>0){ bossMesh.userData.hitTimer-=0.03;
+        bossMesh.userData.bodyMat.emissive.setHex(0xff3d6e); bossMesh.position.z=10+Math.sin(Date.now()*0.05)*2;
+      } else { bossMesh.userData.bodyMat.emissive.setHex(0x7a1fbf); bossMesh.position.z=10; }
+    } else {
+      bossMesh.rotation.y+=0.25; bossMesh.position.y+=0.6; bossMesh.scale.multiplyScalar(0.965);
+      if(bossMesh.scale.x<0.05){ scene.remove(bossMesh); bossMesh=null; }
     }
+  }
 
-    if (typeof updateParticles === 'function') updateParticles();
+  // lava shader
+  if(lavaFloor&&lavaFloor.visible){
+    const time=Date.now()*0.0018, pos=lavaFloor.geometry.attributes.position.array, col=lavaFloor.geometry.attributes.color.array;
+    for(let i=0;i<pos.length;i+=3){ const x=pos[i],y=pos[i+1];
+      const h=Math.sin(x*0.04+time)*3.5+Math.cos(y*0.04+time)*3.5; pos[i+2]=h;
+      const ratio=Math.max(0,Math.min(1,(h+3.5)/7)); col[i]=0.7+ratio*0.3; col[i+1]=ratio*0.85; col[i+2]=0; }
+    lavaFloor.geometry.attributes.position.needsUpdate=true; lavaFloor.geometry.attributes.color.needsUpdate=true;
+    lavaFloor.material.emissiveIntensity=0.6+Math.sin(time)*0.35;
+  }
 
-    if (playerMesh) {
-        playerMesh.position.set(gameState.player.x * TILE_SIZE, 0, gameState.player.y * TILE_SIZE);
-        const rotMap = { up: Math.PI, down: 0, left: -Math.PI/2, right: Math.PI/2 };
-        playerMesh.rotation.y = rotMap[gameState.player.dir];
-        camera.position.set(playerMesh.position.x, 80, playerMesh.position.z + 60);
-        camera.lookAt(playerMesh.position.x, 0, playerMesh.position.z);
-    }
-    
-    renderer.render(scene, camera);
+  updateParticles();
+  renderer.render(scene,camera);
 }
 
-function initGame() {
-    // 1. Starfield Background
-    const starGeometry = new THREE.BufferGeometry();
-    const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.7 });
-    const starVertices = [];
-    for (let i = 0; i < 5000; i++) {
-        starVertices.push((Math.random() - 0.5) * 2000, (Math.random() - 0.5) * 2000, (Math.random() - 0.5) * 2000);
+// ===================== GAME BOOT =====================
+const Game = {
+  newGame(){
+    Save.clear();
+    gameState = JSON.parse(JSON.stringify(freshState));
+    gameState.gameMode='explore'; gameState.startTime=Date.now();
+    World.init(); World.loadLevel('ground');
+    document.getElementById('title-screen').style.display='none';
+    document.getElementById('boss-hud').style.display='none';
+    UI.updateHUD(); Save.write();
+  },
+  continueGame(){
+    const s=Save.read(); if(!s){ Game.newGame(); return; }
+    gameState = JSON.parse(JSON.stringify(freshState));
+    Object.assign(gameState, {
+      player:s.player, inventory:s.inventory, completedQuizzes:s.completedQuizzes||[],
+      unlockedCodexEntries:s.unlockedCodexEntries||[], wrongAnswers:s.wrongAnswers||[],
+      failedQuizzes:s.failedQuizzes||[], collectedQuills:s.collectedQuills||[],
+      bridgeBuilt:!!s.bridgeBuilt, elevatorUnlocked:!!s.elevatorUnlocked, score:s.score||0
+    });
+    gameState.gameMode='explore'; gameState.startTime=Date.now()-(s.elapsedMs||0);
+    World.init(); World.loadLevel(gameState.player.level,true);
+    if(playerMesh) playerMesh.position.set(gameState.player.x*TILE_SIZE,4,gameState.player.y*TILE_SIZE);
+    document.getElementById('title-screen').style.display='none';
+    document.getElementById('boss-hud').style.display='none';
+    UI.updateHUD();
+  }
+};
+
+function initGame(){
+  // starfield
+  const sg=new THREE.BufferGeometry(); const sv=[];
+  for(let i=0;i<5000;i++) sv.push((Math.random()-.5)*2000,(Math.random()-.5)*2000,(Math.random()-.5)*2000);
+  sg.setAttribute('position',new THREE.Float32BufferAttribute(sv,3));
+  stars=new THREE.Points(sg,new THREE.PointsMaterial({color:0xffffff,size:0.8})); stars.visible=false; scene.add(stars);
+
+  // lava sea
+  const seg=64, lg=new THREE.PlaneGeometry(2000,2000,seg,seg);
+  lg.setAttribute('color',new THREE.BufferAttribute(new Float32Array((seg+1)*(seg+1)*3),3));
+  lavaFloor=new THREE.Mesh(lg,new THREE.MeshStandardMaterial({vertexColors:true,emissive:0xff3300,emissiveIntensity:0.8,roughness:0.2}));
+  lavaFloor.rotation.x=-Math.PI/2; lavaFloor.position.y=-5; lavaFloor.visible=false; scene.add(lavaFloor);
+
+  World.init(); Player.init(); World.loadLevel('ground');
+
+  const resize=()=>{ const w=document.getElementById('canvas-wrapper'); renderer.setSize(w.clientWidth,w.clientHeight); renderer.setPixelRatio(Math.min(window.devicePixelRatio,2)); camera.aspect=w.clientWidth/w.clientHeight; camera.updateProjectionMatrix(); };
+  window.addEventListener('resize',resize); resize();
+
+  // input
+  document.addEventListener('keydown',e=>{
+    if(gameState.gameMode==='title') return;
+    if(gameState.gameMode!=='explore') return;
+    switch(e.key){
+      case 'ArrowUp': case 'w': case 'W': Player.move(0,-1); break;
+      case 'ArrowDown': case 's': case 'S': Player.move(0,1); break;
+      case 'ArrowLeft': case 'a': case 'A': Player.move(-1,0); break;
+      case 'ArrowRight': case 'd': case 'D': Player.move(1,0); break;
+      case 'e': case 'E': case 'Enter': Player.interact(); break;
     }
-    starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
-    stars = new THREE.Points(starGeometry, starMaterial);
-    scene.add(stars);
+  });
 
-    // 2. High-Detail Lava Sea (64x64 segments for smooth rolling waves)
-    const segments = 64;
-    const lavaGeo = new THREE.PlaneGeometry(2000, 2000, segments, segments);
-    const colorAttrib = new Float32Array((segments + 1) * (segments + 1) * 3);
-    lavaGeo.setAttribute('color', new THREE.BufferAttribute(colorAttrib, 3));
-    
-    const lavaMat = new THREE.MeshStandardMaterial({ 
-        vertexColors: true, 
-        emissive: 0xff3300, 
-        emissiveIntensity: 0.8,
-        roughness: 0.2 
-    });
-    lavaFloor = new THREE.Mesh(lavaGeo, lavaMat);
-    lavaFloor.rotation.x = -Math.PI / 2;
-    lavaFloor.position.y = -5; 
-    lavaFloor.visible = false;
-    scene.add(lavaFloor);
+  const on=(id,fn)=>{ const el=document.getElementById(id); if(el) el.onclick=fn; };
+  const touch=(id,fn)=>{ const el=document.getElementById(id); if(!el) return;
+    el.addEventListener('touchstart',e=>{ e.preventDefault(); fn(); },{passive:false});
+    el.addEventListener('mousedown',()=>fn()); };
 
-    World.init();
-    gameState.startTime = Date.now();
-    
-    const resizeGame = () => {
-        const wrapper = document.getElementById('canvas-wrapper');
-        renderer.setSize(wrapper.clientWidth, wrapper.clientHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
-        camera.aspect = wrapper.clientWidth / wrapper.clientHeight;
-        camera.updateProjectionMatrix();
-    };
-    window.addEventListener('resize', resizeGame);
-    resizeGame();
+  // title
+  const save=Save.read();
+  if(save){ const cb=document.getElementById('continue-button'); cb.style.display='block'; on('continue-button',Game.continueGame); }
+  on('newgame-button',Game.newGame);
+  on('title-howto',()=>document.getElementById('instructions-modal').classList.add('visible'));
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.4), new THREE.DirectionalLight(0xffffff, 0.8));
-    Player.init();
-    World.loadLevel(gameState.player.level);
+  // dpad
+  touch('up-btn-ipad',()=>Player.move(0,-1));
+  touch('down-btn-ipad',()=>Player.move(0,1));
+  touch('left-btn-ipad',()=>Player.move(-1,0));
+  touch('right-btn-ipad',()=>Player.move(1,0));
+  touch('interact-btn-ipad',()=>Player.interact());
 
-    // 3. Developer Mode Unlock Logic
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
-    canvas.addEventListener('click', (event) => {
-        const rect = renderer.domElement.getBoundingClientRect();
-        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-        raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObjects(clickableGroup.children);
-        if (intersects.length > 0 && intersects[0].object.name === 'dev-trigger') {
-            gameState.elevatorUnlocked = true;
-            runtimeLevels['ground'].map[4][8] = TILE_TYPES.BRIDGE;
-            runtimeLevels['ground'].map[4][9] = TILE_TYPES.BRIDGE;
-            if (gameState.player.level === 'ground') World.loadLevel('ground', true);
-            gameState.completedQuizzes = Object.keys(DATABASE.npcs);
-            gameState.unlockedCodexEntries = Object.keys(DATABASE.codex);
-            UI.updateUI();
-            UI.showInfo("DEVELOPER MODE: Paths Unlocked and All 12 Keys Restored!");
-        }
-    });
+  // buttons
+  on('talk-button',UI.startQuiz);
+  on('close-dialogue-button',UI.closeModals);
+  on('exit-quiz-button',UI.closeModals);
+  on('codex-button',UI.showCodex);
+  on('close-codex-button',UI.closeModals);
+  on('instructions-button',()=>document.getElementById('instructions-modal').classList.add('visible'));
+  on('close-instructions-button',()=>document.getElementById('instructions-modal').classList.remove('visible'));
+  on('stay-button',UI.closeModals);
+  on('goto-ground-button',()=>UI.travel('ground'));
+  on('goto-sky-button',()=>UI.travel('sky'));
+  on('goto-depths-button',()=>UI.travel('depths'));
+  on('play-again-button',()=>{ Save.clear(); location.reload(); });
 
-    // 4. Input Wiring
-    document.addEventListener('keydown', (e) => {
-        if(gameState.gameMode !== 'explore') return;
-        switch(e.key) {
-            case 'ArrowUp': case 'w': Player.move(0, -1); break;
-            case 'ArrowDown': case 's': Player.move(0, 1); break;
-            case 'ArrowLeft': case 'a': Player.move(-1, 0); break;
-            case 'ArrowRight': case 'd': Player.move(1, 0); break;
-            case 'e': case 'Enter': Player.interact(); break;
-        }
-    });
-
-    // === HELPER FUNCTIONS (Restore these to fix the ReferenceError) ===
-    const attachListener = (id, handler) => {
-        const el = document.getElementById(id);
-        if (el) el.onclick = handler;
-    };
-    
-    const attachTouch = (id, handler) => {
-        const el = document.getElementById(id);
-        if (el) {
-            // Touchstart for mobile response
-            el.addEventListener('touchstart', (e) => { 
-                e.preventDefault(); 
-                handler(); 
-            }, { passive: false });
-            // Mousedown for desktop testing
-            el.addEventListener('mousedown', (e) => {
-                handler();
-            });
-        }
-    };
-
-    // 5. Safe Reset for Play Again
-    attachListener('play-again-button', () => window.history.go(0));
-
-    // 6. FIX: Functional Elevator Buttons
-    attachListener('goto-ground-button', () => { 
-        gameState.player.level = 'ground'; // CRITICAL: Updates internal state
-        World.loadLevel('ground'); 
-        UI.closeModals(); 
-    });
-    attachListener('goto-sky-button', () => { 
-        gameState.player.level = 'sky'; // CRITICAL: Updates internal state
-        World.loadLevel('sky'); 
-        UI.closeModals(); 
-    });
-    attachListener('goto-depths-button', () => { 
-        gameState.player.level = 'depths'; // CRITICAL: Updates internal state
-        World.loadLevel('depths'); 
-        UI.closeModals(); 
-    });
-
-    // 7. Standard UI Buttons
-    attachListener('talk-button', UI.startQuiz);
-    attachListener('close-dialogue-button', UI.closeModals);
-    attachListener('exit-quiz-button', UI.closeModals);
-    attachListener('codex-button', UI.showCodex);
-    attachListener('close-codex-button', UI.closeModals);
-    attachListener('stay-button', UI.closeModals);
-
-    // 8. FIX: Mobile D-Pad Wiring
-    attachTouch('up-btn-ipad', () => Player.move(0, -1));
-    attachTouch('down-btn-ipad', () => Player.move(0, 1));
-    attachTouch('left-btn-ipad', () => Player.move(-1, 0));
-    attachTouch('right-btn-ipad', () => Player.move(1, 0));
-    attachTouch('interact-btn-ipad', Player.interact); 
-
-    UI.updateUI();
-    animate();
+  UI.updateHUD(); animate();
 }
-
-window.onload = initGame;
+window.onload=initGame;
 </script>
 </body>
 </html>
